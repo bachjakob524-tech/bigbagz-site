@@ -1,0 +1,2370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BIGBAGZ — the coin that pays the bearer every Friday</title>
+<meta name="description" content="$BAGZ on Solana. 80% of creator fees go back to holders every Friday. On-chain, receipts attached. No roadmap, no promises — just bags.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0E0C07">
+
+<!-- data-todo: domain — bigbagz.fun ist geplant; nach Registrierung bestätigen (og:url, og:image, twitter:image) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BIGBAGZ">
+<meta property="og:title" content="BIGBAGZ — the coin that pays the bearer every Friday">
+<meta property="og:description" content="$BAGZ on Solana. 80% of creator fees go back to holders every Friday. On-chain, receipts attached. No roadmap, no promises — just bags.">
+<meta property="og:url" content="https://bigbagz.fun/">
+<meta property="og:image" content="https://bigbagz.fun/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="BigBagz — black duffel bag logo with gold sunglasses. Bag Day every Friday: fees back to holders, receipts on-chain.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="BIGBAGZ — the coin that pays the bearer every Friday">
+<meta name="twitter:description" content="$BAGZ on Solana. 80% of creator fees go back to holders every Friday. On-chain, receipts attached. No roadmap, no promises — just bags.">
+<meta name="twitter:image" content="https://bigbagz.fun/og.png">
+<meta name="twitter:image:alt" content="BigBagz — black duffel bag logo with gold sunglasses. Bag Day every Friday: fees back to holders, receipts on-chain.">
+<meta name="twitter:site" content="@CryptoBigBagz">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- three.js self-hosted: same origin, starts downloading during HTML parse — no third-party CDN round-trip.
+     The import map MUST come before any modulepreload: preloaded addons import the bare specifier "three",
+     and a map that registers later loses the race → "Failed to resolve module specifier" (intermittent!). -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js",
+    "three/addons/": "./vendor/addons/"
+  }
+}
+</script>
+<link rel="modulepreload" href="vendor/three.module.js">
+<link rel="modulepreload" href="vendor/addons/environments/RoomEnvironment.js">
+<link rel="modulepreload" href="vendor/addons/objects/Reflector.js">
+<!-- fonts load async: a slow third-party stylesheet must never block the first paint -->
+<link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet"></noscript>
+<style>
+:root{
+  --ink:#0E0C07;
+  --gold:#D4A72C;
+  --gold-deep:#8A6A1B;
+  --gold-pale:#F0DCA0;
+  --gold-hot:#F5E4AE;
+  --paper:#EFE7D2;
+  --paper-ink:#2A2415;
+  --muted:#C9BD97;
+  --display:'Saira Stencil One',sans-serif;
+  --body:'Space Grotesk',sans-serif;
+  --mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+/* html must clip too: the rotated gold strip + hero scrims overflow sideways (70px on 375px
+   phones) and let the page pan/drift horizontally if only body clips */
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{
+  background:var(--ink);
+  color:var(--gold-pale);
+  font-family:var(--body);
+  font-size:17px;line-height:1.6;
+  overflow-x:hidden;
+  touch-action:manipulation; /* no double-tap zoom jumps; pinch zoom stays allowed */
+}
+a{color:var(--gold)}
+::selection{background:var(--gold);color:var(--ink)}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+
+/* ---------- 3D canvas ---------- */
+#bg{position:fixed;inset:0;z-index:0;display:block;opacity:0;transition:opacity .9s ease}
+#bg.on{opacity:1}
+/* boot shimmer: the GPU compiles shaders on first visit — show intent, not a hang */
+.boot{
+  position:fixed;right:22px;bottom:18px;z-index:2;
+  font-family:var(--mono);font-size:10px;letter-spacing:.34em;color:var(--gold);
+  display:flex;align-items:center;gap:10px;opacity:.85;transition:opacity .6s ease;
+  pointer-events:none;
+}
+.boot span{
+  display:block;width:80px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  background-size:200% 100%;animation:bootSlide 1.1s linear infinite;
+}
+@keyframes bootSlide{from{background-position:200% 0}to{background-position:-200% 0}}
+.boot.done{opacity:0}
+body.no3d .boot{display:none}
+@media (prefers-reduced-motion:reduce){.boot span{animation:none}}
+body.no3d #bg{display:none}
+body.no3d{background:radial-gradient(ellipse 80% 60% at 50% 30%,#221C0E 0%,var(--ink) 70%)}
+.hero-fallback{display:none;width:min(320px,64vw);margin:30px auto 0;filter:drop-shadow(0 20px 50px rgba(0,0,0,.6))}
+body.no3d .hero-fallback{display:block}
+
+.content{position:relative;z-index:1}
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+
+/* ---------- hero ---------- */
+.hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;justify-content:flex-start;align-items:center;
+  text-align:center;
+  padding:9vh 20px 0;
+  pointer-events:none;
+}
+.hero a,.hero .serial{pointer-events:auto}
+.hero > div:first-child{position:relative}
+.hero > div:first-child::before{
+  content:"";position:absolute;inset:-30px -90px -20px;z-index:-1;
+  background:radial-gradient(ellipse 75% 65% at 50% 42%, rgba(9,7,4,.6) 0%, rgba(9,7,4,.3) 55%, transparent 75%);
+  pointer-events:none;
+}
+.eyebrow{
+  font-family:var(--mono);font-size:12px;letter-spacing:.34em;
+  color:var(--gold);text-transform:uppercase;
+  text-shadow:0 2px 18px rgba(0,0,0,.9);
+}
+h1{
+  font-family:var(--display);
+  font-size:clamp(64px,12vw,150px);
+  line-height:.92;
+  letter-spacing:.02em;
+  margin:12px 0 4px;
+  background:linear-gradient(120deg,var(--gold-deep) 0%,var(--gold) 28%,var(--gold-hot) 46%,#FFF8E0 50%,var(--gold-hot) 54%,var(--gold) 72%,var(--gold-deep) 100%);
+  background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 6px 30px rgba(0,0,0,.85));
+  animation:h1shine 6.5s ease-in-out infinite;
+}
+@keyframes h1shine{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+.facts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:0 0 24px}
+.facts span{
+  font-family:var(--mono);font-size:11px;letter-spacing:.18em;
+  color:var(--gold-pale);
+  border:1px solid rgba(138,106,27,.6);
+  background:rgba(10,8,4,.55);backdrop-filter:blur(8px);
+  padding:7px 13px;
+}
+.cue{
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.4em;
+  color:var(--gold-deep);margin-bottom:3vh;
+}
+.cue span{
+  display:block;width:1px;height:44px;
+  background:linear-gradient(180deg,var(--gold),transparent);
+  transform-origin:top;animation:cueDrop 1.9s ease-in-out infinite;
+}
+@keyframes cueDrop{0%{transform:scaleY(0);opacity:1}55%{transform:scaleY(1);opacity:1}100%{transform:scaleY(1);opacity:0}}
+.denom{
+  font-family:var(--mono);font-size:14px;letter-spacing:.26em;color:#F2E3B3;
+  text-shadow:0 2px 14px rgba(0,0,0,.9);
+  display:inline-block;background:rgba(10,8,4,.55);padding:4px 14px; /* pill scrim — gold-on-gold over the vault wheel was invisible */
+}
+.hero-low{
+  margin-top:auto;position:relative;
+  display:flex;flex-direction:column;align-items:center;
+  padding:44px 30px 0;
+}
+.hero-low::before{
+  content:"";position:absolute;inset:-30px -70px -10px;
+  background:radial-gradient(ellipse 75% 80% at 50% 60%, rgba(9,7,4,.82) 0%, rgba(9,7,4,.5) 55%, transparent 78%);
+  pointer-events:none;z-index:-1;
+}
+.promise{
+  font-family:var(--display);
+  font-size:clamp(18px,3vw,28px);
+  color:var(--gold-pale);
+  letter-spacing:.05em;
+  text-shadow:0 3px 22px rgba(0,0,0,1), 0 1px 6px rgba(0,0,0,.9);
+}
+.sub{
+  max-width:540px;margin:10px auto 16px;color:#D9CFA8;
+  text-shadow:0 2px 12px rgba(0,0,0,1);
+}
+.serial{
+  display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;
+  font-family:var(--mono);font-size:14px;
+  margin-bottom:4vh;
+}
+.serial .ca{
+  border:1px dashed var(--gold-deep);
+  padding:11px 16px;color:var(--gold-pale);letter-spacing:.06em;
+  background:rgba(10,8,4,.6);backdrop-filter:blur(8px);
+}
+.btn{
+  font-family:var(--display);font-size:19px;letter-spacing:.06em;
+  background:linear-gradient(160deg,var(--gold-hot),var(--gold) 55%,var(--gold-deep));
+  color:var(--ink);border:0;padding:13px 30px;cursor:pointer;
+  text-decoration:none;display:inline-block;
+  box-shadow:0 10px 34px rgba(212,167,44,.28);
+  transition:transform .18s ease, box-shadow .18s ease;
+  position:relative;overflow:hidden;
+}
+.btn::after{
+  content:"";position:absolute;top:0;bottom:0;left:-75%;width:45%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:skewX(-20deg);transition:left .5s ease;pointer-events:none;
+}
+.btn:hover::after{left:125%}
+.btn:hover{transform:translateY(-2px);box-shadow:0 16px 44px rgba(212,167,44,.42)}
+.btn.ghost{
+  background:rgba(10,8,4,.55);color:var(--gold);
+  border:2px solid var(--gold-deep);box-shadow:none;backdrop-filter:blur(8px);
+}
+
+/* ---------- gold ticker strip ---------- */
+.strip{
+  background:linear-gradient(90deg,var(--gold-deep),var(--gold) 30%,var(--gold-hot) 50%,var(--gold) 70%,var(--gold-deep));
+  color:var(--ink);
+  font-family:var(--display);font-size:16px;letter-spacing:.14em;
+  padding:12px 0;white-space:nowrap;overflow:hidden;
+  transform:rotate(-1.2deg) scale(1.02);
+  box-shadow:0 14px 50px rgba(0,0,0,.55);
+}
+.strip .inner{display:inline-block;animation:slide 28s linear infinite}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ---------- sections ---------- */
+section{padding:110px 0 10px}
+.sec-label{
+  font-family:var(--mono);font-size:12px;letter-spacing:.32em;
+  color:var(--gold);text-transform:uppercase;
+  display:flex;align-items:center;gap:14px;
+}
+.sec-label::before{content:"◆";font-size:8px;color:var(--gold-deep)}
+.sec-label::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--gold),rgba(138,106,27,0));opacity:.6}
+h2{
+  font-family:var(--display);
+  font-size:clamp(30px,5vw,50px);
+  color:var(--gold-pale);
+  margin:10px 0 32px;letter-spacing:.02em;
+  text-shadow:0 4px 30px rgba(0,0,0,1), 0 2px 8px rgba(0,0,0,.95);
+}
+.glass{
+  background:rgba(11,9,5,.78);
+  border:1px solid rgba(138,106,27,.55);
+  backdrop-filter:blur(18px) saturate(.85);
+  -webkit-backdrop-filter:blur(18px) saturate(.85);
+  box-shadow:0 24px 60px rgba(0,0,0,.45);
+}
+
+/* mechanic */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.step{padding:28px 24px;transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease;position:relative;overflow:hidden}
+.step::before{
+  content:attr(data-n);position:absolute;right:8px;top:-4px;
+  font-family:var(--display);font-size:96px;line-height:1;
+  color:var(--gold);opacity:.07;pointer-events:none;
+}
+.step::after{content:"";position:absolute;inset:8px;border:1px solid rgba(212,167,44,.14);pointer-events:none}
+.step:hover{transform:translateY(-6px);border-color:var(--gold);box-shadow:0 18px 50px rgba(212,167,44,.15)}
+.step .k{font-family:var(--mono);font-size:12px;color:var(--gold);letter-spacing:.22em;text-transform:uppercase}
+.step h3{font-family:var(--display);font-size:24px;color:var(--gold-pale);margin:8px 0;letter-spacing:.03em}
+.step p{color:var(--muted);font-size:15.5px}
+
+/* ledger */
+.ledger-tilt{perspective:1200px;max-width:720px;margin:0 auto}
+.ledger{
+  background:var(--paper);color:var(--paper-ink);
+  background-image:repeating-linear-gradient(0deg,rgba(42,36,21,.035) 0 1px,transparent 1px 3px);
+  font-family:var(--mono);
+  padding:34px 30px 26px;
+  box-shadow:0 40px 100px rgba(0,0,0,.7);
+  position:relative;
+  transform:rotate(-.6deg);
+  transition:transform .35s ease;
+}
+.ledger-tilt:hover .ledger{transform:rotate(0) rotateX(4deg) translateY(-4px)}
+.ledger::before,.ledger::after{
+  content:"";position:absolute;left:0;right:0;height:12px;
+  background-image:linear-gradient(45deg,var(--paper) 25%,transparent 25%),linear-gradient(-45deg,var(--paper) 25%,transparent 25%);
+  background-size:16px 16px;
+}
+.ledger::before{top:-12px;background-position:bottom}
+.ledger::after{bottom:-12px;transform:scaleY(-1);background-position:bottom}
+.seal{
+  position:absolute;top:-20px;right:20px;width:76px;height:76px;border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,var(--gold-hot),var(--gold) 55%,var(--gold-deep));
+  color:var(--ink);font-family:var(--display);font-size:34px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 10px 26px rgba(0,0,0,.35),inset 0 0 0 3px rgba(138,106,27,.65),inset 0 0 0 7px rgba(245,228,174,.5);
+  transform:rotate(-8deg);z-index:2;
+}
+.seal::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px dashed rgba(212,167,44,.55)}
+.ledger h3{font-size:17px;letter-spacing:.18em;text-align:center;border-bottom:2px solid var(--paper-ink);padding-bottom:12px;margin-bottom:6px}
+.ledger .tagline{text-align:center;font-size:12.5px;padding:6px 0 14px;letter-spacing:.04em}
+.ledger table{width:100%;border-collapse:collapse;font-size:14px}
+.ledger td{padding:11px 4px;border-bottom:1px dashed #9A8E6C}
+.ledger td:last-child{text-align:right}
+.ledger .pending{color:#7A6E4C}
+.ledger .total{font-weight:600}
+.countdown{font-weight:600;font-variant-numeric:tabular-nums}
+.ledger tr.bd td{border-bottom:0;padding-bottom:2px}
+.ledger tr.txrow td{font-size:12px;padding:0 4px 11px;text-align:left}
+.ledger tr.txrow a{color:var(--paper-ink);text-decoration:underline;text-decoration-color:#9A8E6C;margin-right:10px;word-break:break-all}
+
+/* straight talk */
+.talk{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.talk .col{padding:28px 26px}
+.talk .col:not(.no){box-shadow:inset 0 0 70px rgba(212,167,44,.07)}
+.talk .col.no{border-style:dashed;background:rgba(11,9,5,.92)} /* denser: the honesty pitch must not fight the bright pile behind it */
+.talk .col.no li{color:#B9AC80}
+.talk .no li:hover{text-decoration:line-through;text-decoration-color:var(--gold-deep)}
+.talk h3{font-family:var(--display);font-size:22px;letter-spacing:.03em;margin-bottom:14px;color:var(--gold-pale)}
+.talk ul{list-style:none}
+.talk li{padding:7px 0;color:var(--muted);font-size:15.5px}
+.talk li::before{content:"■ ";color:var(--gold);font-size:10px;vertical-align:2px;margin-right:8px}
+.talk .no li::before{content:"✕ ";color:var(--gold-deep);font-size:13px}
+
+/* how to buy */
+.buy{counter-reset:s}
+.buy .row{
+  display:flex;gap:20px;align-items:baseline;
+  padding:22px 20px;margin-bottom:10px;
+  border-left:2px solid transparent;
+  transition:transform .2s ease,border-left-color .2s ease;
+}
+.buy .row:hover{transform:translateX(6px);border-left-color:var(--gold)}
+.buy .row::before{
+  counter-increment:s;content:counter(s,decimal-leading-zero);
+  font-family:var(--display);font-size:30px;color:var(--gold);min-width:56px;
+}
+.buy b{color:var(--gold-pale)}
+.buy .row p{color:var(--muted)}
+
+/* footer */
+footer{
+  padding:120px 0 46px;text-align:center;
+  background:linear-gradient(180deg, rgba(9,7,4,0) 0%, rgba(9,7,4,.55) 30%, rgba(9,7,4,.92) 100%);
+}
+.socials{display:flex;gap:12px;justify-content:center;margin-bottom:30px;flex-wrap:wrap}
+.tiny{
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.14em;color:#AFA378;
+  max-width:640px;margin:0 auto;
+  border-top:1px solid rgba(138,106,27,.4);padding-top:22px;text-shadow:0 2px 10px rgba(0,0,0,.9);
+}
+
+/* reveals */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.reveal.in{opacity:1;transform:none}
+
+/* flex quote — must survive the bright vault door behind it */
+.flexquote{
+  font-family:var(--display);
+  font-size:clamp(26px,4.6vw,48px);
+  text-align:center;color:var(--gold-pale);
+  letter-spacing:.03em;line-height:1.3;
+  text-shadow:0 4px 30px rgba(0,0,0,1), 0 2px 8px rgba(0,0,0,.95);
+  padding:44px 20px 50px;
+  background:radial-gradient(ellipse 80% 105% at 50% 50%, rgba(9,7,4,.92) 0%, rgba(9,7,4,.62) 58%, transparent 82%);
+}
+.flexquote span{
+  /* punchline must be BRIGHTER than the setup line — never invert the hierarchy */
+  background:linear-gradient(120deg,var(--gold-hot) 0%,#FFF8E0 50%,var(--gold-hot) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  /* text-shadow paints THROUGH transparent glyphs; drop-shadow follows the glyph alpha */
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.9)) drop-shadow(0 10px 26px rgba(0,0,0,.85));
+}
+.flexquote small{
+  display:block;margin-top:18px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.3em;color:var(--gold);
+  text-shadow:0 2px 12px rgba(0,0,0,1);
+}
+
+/* young money polish */
+/* wordmark: a hard white specular band sweeps across the gold once per cycle */
+h1{
+  background-image:
+    linear-gradient(105deg, transparent 42%, rgba(255,255,255,.65) 50%, transparent 58%),
+    linear-gradient(120deg,var(--gold-deep) 0%,var(--gold) 28%,var(--gold-hot) 46%,#FFF8E0 50%,var(--gold-hot) 54%,var(--gold) 72%,var(--gold-deep) 100%);
+  background-size:60% 100%, 250% 100%;
+  background-repeat:no-repeat;
+  background-position:-160% 50%, 0% 50%; /* static = 0% keyframe, so reduced-motion parks the sweep off-canvas */
+  animation:h1sweep 6.5s ease-in-out infinite;
+}
+@keyframes h1sweep{
+  0%{background-position:-160% 50%, 0% 50%}
+  45%{background-position:-160% 50%, 90% 50%}
+  60%{background-position:260% 50%, 100% 50%}
+  100%{background-position:260% 50%, 0% 50%}
+}
+/* facts chips light up like jewellery on hover */
+.facts span{transition:border-color .3s ease, box-shadow .3s ease, transform .3s ease}
+.facts span:hover{
+  border-color:var(--gold);
+  box-shadow:0 0 22px rgba(212,167,44,.28), inset 0 0 12px rgba(212,167,44,.14);
+  transform:translateY(-2px);
+}
+/* the gold CTA throws its shine on its own every few seconds — not only on hover */
+@keyframes btnAutoShine{0%,72%{left:-75%}88%,100%{left:125%}}
+.btn:not(.ghost)::after{animation:btnAutoShine 5.5s ease-in-out infinite}
+
+/* cinematic vignette: re-anchors deep black at the frame edges */
+body::before{
+  content:"";position:fixed;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(ellipse 115% 95% at 50% 44%, rgba(5,4,2,0) 56%, rgba(5,4,2,.38) 86%, rgba(5,4,2,.6) 100%);
+}
+
+/* film grain */
+body::after{
+  content:"";position:fixed;inset:0;z-index:3;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+}
+.foot-mark{width:56px;height:56px;margin:0 auto 22px;display:block;opacity:.92;filter:drop-shadow(0 8px 22px rgba(0,0,0,.6))}
+
+@media (max-width:760px){
+  .steps{grid-template-columns:1fr}
+  .talk{grid-template-columns:1fr}
+  section{padding:76px 0 8px}
+  /* compressed hero typo opens a viewing window for the 3D bag */
+  .hero{padding-top:5vh}
+  h1{font-size:clamp(54px,16vw,74px)}
+  .denom{font-size:12px}
+  .sub{font-size:14.5px;max-width:430px;margin:8px auto 12px}
+  .facts{gap:6px;margin:0 0 14px}
+  .facts span{font-size:9.5px;letter-spacing:.12em;padding:5px 9px}
+  .serial{gap:8px;margin-bottom:3vh}
+  .serial .ca{padding:9px 12px;font-size:12.5px}
+  .btn{font-size:17px;padding:11px 24px}
+  /* ghost row (ledger + socials) fits one line on 390px */
+  .serial .btn.ghost{font-size:13px;padding:9px 11px;border-width:1.5px}
+  .hero-low{padding:28px 22px 0}
+  .hero-low::before{inset:-16px -40px -6px}
+  /* seal was swallowing the ledger title on 390px */
+  .seal{width:56px;height:56px;top:-28px;right:8px;font-size:24px}
+  .ledger{padding:30px 18px 22px}
+  .ledger td{font-size:12.5px;padding:10px 2px}
+}
+@media (prefers-reduced-motion:reduce){
+  .strip .inner{animation:none}
+  .reveal{opacity:1;transform:none;transition:none}
+  html{scroll-behavior:auto}
+  h1{animation:none}
+  .cue span{animation:none}
+  .btn::after{display:none}
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="boot" id="boot" aria-hidden="true"><span></span>OPENING THE VAULT</div>
+
+<div class="content">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Solana · Fair Launch · pump.fun</p>
+      <h1>BIGBAGZ</h1>
+      <p class="denom">— $BAGZ —</p>
+      <img class="hero-fallback" src="logo.svg" alt="BigBagz — a glossy black duffel bag with gold sunglasses, stuffed with cash">
+    </div>
+    <div class="hero-low">
+      <p class="promise">THIS NOTE PAYS THE BEARER — EVERY FRIDAY.</p>
+      <p class="sub">Creator fees don't buy the dev a Lambo. 80% goes straight back to the holders.
+      On-chain, every week, receipts attached.</p>
+      <div class="facts" aria-label="Facts">
+        <span>80% OF FEES → HOLDERS</span>
+        <span>EVERY FRIDAY</span>
+        <span>100% ON-CHAIN</span>
+      </div>
+      <div class="serial">
+        <span class="ca" id="ca">CA · DROPS AT LAUNCH</span>
+        <a class="btn" href="https://pump.fun" rel="noopener">BUY ON PUMP.FUN</a>
+        <a class="btn ghost" href="#ledger">SEE THE LEDGER</a>
+        <a class="btn ghost" href="https://x.com/CryptoBigBagz" rel="noopener" aria-label="BigBagz on X">X</a>
+        <a class="btn ghost" href="https://t.me/BigBagz" rel="noopener">TELEGRAM</a>
+      </div>
+      <div class="cue" aria-hidden="true"><span></span>SCROLL</div>
+    </div>
+  </header>
+
+  <!-- ============ GOLD STRIP ============ -->
+  <div class="strip" aria-hidden="true"><div class="inner">
+    BAG DAY EVERY FRIDAY&nbsp;·&nbsp;80% OF FEES BACK TO HOLDERS&nbsp;·&nbsp;RECEIPTS ON-CHAIN&nbsp;·&nbsp;NO PROMISES, JUST BAGS&nbsp;·&nbsp;NEW MONEY, REAL RECEIPTS&nbsp;·&nbsp;
+    BAG DAY EVERY FRIDAY&nbsp;·&nbsp;80% OF FEES BACK TO HOLDERS&nbsp;·&nbsp;RECEIPTS ON-CHAIN&nbsp;·&nbsp;NO PROMISES, JUST BAGS&nbsp;·&nbsp;NEW MONEY, REAL RECEIPTS&nbsp;·&nbsp;
+  </div></div>
+
+  <!-- ============ MECHANIC ============ -->
+  <section id="mechanic">
+    <div class="wrap">
+      <p class="sec-label reveal">The mechanic</p>
+      <h2 class="reveal">THAT'S IT. THAT'S THE COIN.</h2>
+      <div class="steps">
+        <div class="step glass reveal" data-n="01">
+          <p class="k">Step 1 · You trade</p>
+          <h3>VOLUME HAPPENS</h3>
+          <p>Every buy and sell on the bonding curve routes a creator fee to the BigBagz wallet. After graduation the fees keep flowing automatically.</p>
+        </div>
+        <div class="step glass reveal" data-n="02">
+          <p class="k">Step 2 · Fees stack</p>
+          <h3>THE BAG FILLS</h3>
+          <p>The creator wallet is public from day one. Watch it fill in real time — nothing moves without the whole chain seeing it.</p>
+        </div>
+        <div class="step glass reveal" data-n="03">
+          <p class="k">Step 3 · Friday</p>
+          <h3>BAG DAY</h3>
+          <p>Every Friday 80% of the bag rains back on the holders as a SOL airdrop — 20% keeps the project running. Every payout is posted with its transaction hash.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LEDGER ============ -->
+  <section id="ledger">
+    <div class="wrap">
+      <p class="sec-label reveal">Proof, not promises</p>
+      <h2 class="reveal">THE BAG DAY LEDGER</h2>
+      <div class="ledger-tilt reveal">
+        <div class="ledger">
+          <div class="seal" aria-hidden="true">$</div>
+          <h3>★ BAG DAY LEDGER ★</h3>
+          <p class="tagline">If it's not in the ledger, it didn't happen.</p>
+          <table>
+            <tr><td>BAG DAY #1</td><td class="countdown" id="countdown">—</td></tr>
+            <tr class="pending"><td>TX HASH</td><td>WILL PRINT HERE</td></tr>
+            <tr class="pending"><td>TX HASH</td><td>WILL PRINT HERE</td></tr>
+            <tr><td class="total">TOTAL PAID TO HOLDERS</td><td class="total">0.000 SOL — SO FAR</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FLEX QUOTE ============ -->
+<section id="flex">
+  <div class="wrap">
+    <blockquote class="flexquote reveal">
+      WE CAN'T PROMISE YOU A LAMBO.<br>
+      <span>WE CAN PROMISE YOU THE RECEIPTS.</span>
+      <small>— THE ONLY HONEST FLEX IN THE TRENCHES —</small>
+    </blockquote>
+  </div>
+</section>
+
+<!-- ============ STRAIGHT TALK ============ -->
+  <section id="talk">
+    <div class="wrap">
+      <p class="sec-label reveal">Straight talk</p>
+      <h2 class="reveal">WHAT WE SAY — AND WHAT WE DON'T</h2>
+      <div class="talk">
+        <div class="col glass reveal">
+          <h3>YOU GET</h3>
+          <ul>
+            <li>80% of creator fees redistributed to holders every Friday</li>
+            <li>An honest split, stated upfront: 20% stays with the project</li>
+            <li>A public creator wallet, linked from day one</li>
+            <li>Every payout posted with its TX hash</li>
+            <li>A founder who answers in the group chat</li>
+          </ul>
+        </div>
+        <div class="col glass no reveal">
+          <h3>YOU WON'T HEAR</h3>
+          <ul>
+            <li>"Utility coming soon"</li>
+            <li>Price targets or "100x" posts</li>
+            <li>Exchange listing promises</li>
+            <li>A roadmap we can't prove on-chain</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOW TO BUY ============ -->
+  <section id="how">
+    <div class="wrap">
+      <p class="sec-label reveal">How to buy</p>
+      <h2 class="reveal">THREE STEPS TO A BAG</h2>
+      <div class="buy">
+        <div class="row glass reveal"><div><b>Get a Solana wallet.</b><p>Phantom or Solflare, as browser extension or app. Write the seed phrase on paper — anyone who has it, has your bag.</p></div></div>
+        <div class="row glass reveal"><div><b>Load it with SOL.</b><p>Buy SOL on any exchange (Kraken, Coinbase, Bitpanda…) and send it to your wallet address.</p></div></div>
+        <div class="row glass reveal"><div><b>Find $BAGZ on pump.fun.</b><p>Paste the contract address from this page — never trust one from a DM — and swap.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer>
+    <div class="wrap">
+      <img class="foot-mark reveal" src="logo.svg" alt="" aria-hidden="true">
+      <div class="socials reveal">
+        <a class="btn ghost" href="https://x.com/CryptoBigBagz" rel="noopener">X / TWITTER</a>
+        <a class="btn ghost" href="https://t.me/BigBagz" rel="noopener">TELEGRAM</a>
+        <a class="btn ghost" href="#" data-todo="dexscreener">DEX SCREENER</a>
+      </div>
+      <p class="tiny">EST. 2026 · PRINTED ON THE BLOCKCHAIN · NO BEARER LEFT BEHIND</p>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+// countdown to next Friday 16:00 UTC (Bag Day)
+(function(){
+  var el=document.getElementById('countdown');
+  function next(){
+    var n=new Date(), d=new Date(Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),16,0,0));
+    var add=(5-d.getUTCDay()+7)%7;
+    if(add===0 && n>d) add=7;
+    d.setUTCDate(d.getUTCDate()+add);
+    return d;
+  }
+  var target=next();
+  function tick(){
+    var ms=target-new Date();
+    if(ms<0){target=next();return;}
+    var s=Math.floor(ms/1000),
+        dd=Math.floor(s/86400), hh=Math.floor(s%86400/3600),
+        mm=Math.floor(s%3600/60), ss=s%60;
+    el.textContent='T-'+dd+'D '+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+  }
+  tick(); setInterval(tick,1000);
+})();
+
+// scroll reveals
+(function(){
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+  },{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+})();
+
+// Bag-Day-Ledger: lädt ledger.json (gepflegt nach jedem Payout, siehe docs/ledger-pflege.md).
+// Guard-Kette: bei leerem Array, 404, kaputtem JSON oder invaliden Einträgen bleibt der
+// statische Platzhalter unverändert stehen — die Seite sieht nie kaputt aus.
+(function(){
+  var cd = document.getElementById('countdown');
+  if(!cd || !window.fetch) return;
+  var cdRow = cd.parentNode;                 // <tr> der Countdown-Zeile (Timer-Referenz erhalten!)
+  var body = cdRow.parentNode;               // <tbody>, vom Parser erzeugt
+  var cdLabel = cdRow.firstElementChild;
+
+  function td(text, cls){
+    var el = document.createElement('td');
+    if(cls) el.className = cls;
+    el.textContent = text;
+    return el;
+  }
+  function fmt(n){ return n.toFixed(3) + ' SOL'; }
+  function short(sig){ return sig.slice(0,4) + '…' + sig.slice(-4); }
+
+  function render(days){
+    var total = 0;
+    for(var i=0;i<days.length;i++) total += days[i].sol;
+
+    while(body.firstChild) body.removeChild(body.firstChild);
+    cdLabel.textContent = 'NEXT BAG DAY #' + (days.length + 1);
+    body.appendChild(cdRow);
+
+    var recent = days.slice(-5);
+    for(var i=recent.length-1;i>=0;i--){
+      var d = recent[i], n = days.length - recent.length + i + 1;
+      var row = document.createElement('tr');
+      row.className = 'bd';
+      row.appendChild(td('BAG DAY #' + n + ' · ' + d.date));
+      row.appendChild(td(fmt(d.sol)));
+      body.appendChild(row);
+
+      var txRow = document.createElement('tr');
+      txRow.className = 'txrow';
+      var cell = document.createElement('td');
+      cell.colSpan = 2;
+      var shown = Math.min(d.txs.length, 6);  // Beleg bleibt Beleg: max. 6 Links pro Bag Day
+      for(var j=0;j<shown;j++){
+        var a = document.createElement('a');
+        a.href = 'https://solscan.io/tx/' + encodeURIComponent(d.txs[j]);
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = 'tx:' + short(d.txs[j]);
+        cell.appendChild(a);
+      }
+      if(d.txs.length > shown){
+        var more = document.createElement('span');
+        more.textContent = '+' + (d.txs.length - shown) + ' more on-chain';
+        cell.appendChild(more);
+      }
+      txRow.appendChild(cell);
+      body.appendChild(txRow);
+    }
+
+    var totalRow = document.createElement('tr');
+    totalRow.appendChild(td('TOTAL PAID TO HOLDERS (' + days.length + '×)', 'total'));
+    totalRow.appendChild(td(fmt(total), 'total'));
+    body.appendChild(totalRow);
+  }
+
+  fetch('ledger.json', {cache:'no-store'})
+    .then(function(r){ if(!r.ok) throw new Error('http ' + r.status); return r.json(); })
+    .then(function(data){
+      var days = data && Array.isArray(data.bagDays) ? data.bagDays : [];
+      if(!days.length) return;               // leer -> Platzhalter bleibt (Pre-Launch)
+      var ok = days.every(function(d){
+        return d && typeof d.date === 'string' && /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(d.date) &&
+               typeof d.sol === 'number' && isFinite(d.sol) && d.sol >= 0 && d.sol < 1000 &&
+               Array.isArray(d.txs) && d.txs.length > 0 &&
+               d.txs.every(function(s){ return typeof s === 'string' && /^[1-9A-HJ-NP-Za-km-z]{80,90}$/.test(s); });
+      });
+      if(!ok) throw new Error('invalid entry');
+      render(days);
+    })
+    .catch(function(e){ console.warn('ledger.json:', e.message || e); });
+})();
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { Reflector } from 'three/addons/objects/Reflector.js';
+
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const mobile = matchMedia('(max-width: 760px)').matches;
+
+try {
+  const canvas = document.getElementById('bg');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+  // cap the framebuffer for huge/ultrawide screens: 3440px × Windows scaling would compile and
+  // render a giant target on first load — nobody sees the difference, everybody feels the stall
+  renderer.setPixelRatio(Math.min(devicePixelRatio, mobile ? 1.5 : 2, Math.max(1, 3600/innerWidth)));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.24;
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0E0C07);
+  scene.fog = new THREE.Fog(0x0E0C07, 9.5, 24);
+
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+  const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.1, 60);
+  camera.position.set(0, 2.1, 7.4);
+
+  // ---- lights ----
+  const key = new THREE.SpotLight(0xFFE0B0, 210, 30, Math.PI/5, 0.7, 2);
+  key.position.set(4, 8, 5);
+  scene.add(key);
+  const rim = new THREE.DirectionalLight(0xD4A72C, 2.4);
+  rim.position.set(-6, 3, -4);
+  scene.add(rim);
+  // second edge light so the right flank doesn't die into black
+  // (enough blue channel to survive ACES — near-zero blue collapses gold into burnt red)
+  const rim2 = new THREE.DirectionalLight(0x9A7B36, 1.1);
+  rim2.position.set(6, 2.5, -5);
+  scene.add(rim2);
+  scene.add(new THREE.AmbientLight(0x27221A, 1.3));
+  // gold bounce off the floor — a hint, not a floodlight; sits on the key-light side (one sun, one direction)
+  const uplight = new THREE.PointLight(0xD9A85A, 7, 9, 2);
+  uplight.position.set(1.0, 0.32, 2.6);
+  scene.add(uplight);
+  // warm kicker behind the bag: separates the black silhouette from the vault door
+  const kicker = new THREE.PointLight(0xFFD980, 55, 11, 2);
+  kicker.position.set(0, 1.7, -3.4);
+  scene.add(kicker);
+  // narrow accent on the vault door so its gold rim reads through the fog
+  if (!mobile){
+    const vaultSpot = new THREE.SpotLight(0xD4A72C, 180, 18, Math.PI/8, 0.7, 1.6);
+    vaultSpot.position.set(0, 7.5, -2.5);
+    vaultSpot.target.position.set(0, 2.7, -7.2);
+    scene.add(vaultSpot, vaultSpot.target);
+  }
+  // low warm pool over the ingot pyramid — a hint of sparkle, must not wash out the gold
+  const barGlow = new THREE.PointLight(0xFFD980, 6, 4.5, 2);
+  barGlow.position.set(-2.3, 1.1, 1.1);
+  scene.add(barGlow);
+  // side accents grazing the columns (desktop only)
+  if (!mobile){
+    const colAccentR = new THREE.PointLight(0xC79E2E, 14, 10, 2);
+    colAccentR.position.set(5.5, 3.5, -4.5);
+    const colAccentL = colAccentR.clone();
+    colAccentL.position.x = -5.5;
+    scene.add(colAccentR, colAccentL);
+  }
+
+  // ---- materials ----
+  // tiling multi-octave leather grain: soft blotches, pores, fine creases (+ optional $ monogram)
+  function leatherGrainTexture(mono){
+    const S = 512;
+    const c = document.createElement('canvas'); c.width = c.height = S;
+    const x = c.getContext('2d');
+    x.fillStyle = '#808080'; x.fillRect(0, 0, S, S);
+    let seed = 7;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    // draw everything 9x so the texture tiles without visible seams
+    const wrapped = draw => { for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) draw(ox, oy); };
+    // three octaves of blotches: broad undulation -> medium grain -> fine grain
+    for (const [count, rad, delta] of [[24, 95, 9], [110, 30, 12], [520, 9, 16]]){
+      for (let i = 0; i < count; i++){
+        const px = rand()*S, py = rand()*S, r = rad*(0.5 + rand());
+        const lum = Math.round(128 + (rand() - 0.5)*2*delta);
+        wrapped((ox, oy) => {
+          const g = x.createRadialGradient(px+ox, py+oy, 0, px+ox, py+oy, r);
+          g.addColorStop(0, `rgba(${lum},${lum},${lum},0.5)`);
+          g.addColorStop(1, `rgba(${lum},${lum},${lum},0)`);
+          x.fillStyle = g;
+          x.beginPath(); x.arc(px+ox, py+oy, r, 0, 7); x.fill();
+        });
+      }
+    }
+    // pores: tiny dark pits
+    x.fillStyle = 'rgba(100,100,100,0.55)';
+    for (let i = 0; i < 2400; i++) x.fillRect(rand()*S, rand()*S, 1 + rand()*1.5, 1 + rand()*1.5);
+    // fine creases: light + dark hairlines
+    for (let i = 0; i < 140; i++){
+      const px = rand()*S, py = rand()*S, len = 15 + rand()*45, a = rand()*Math.PI*2;
+      x.strokeStyle = rand() > 0.5 ? 'rgba(152,152,152,0.28)' : 'rgba(104,104,104,0.32)';
+      x.lineWidth = 0.8 + rand();
+      wrapped((ox, oy) => {
+        x.beginPath();
+        x.moveTo(px+ox, py+oy);
+        x.quadraticCurveTo(px+ox + Math.cos(a+0.6)*len*0.5, py+oy + Math.sin(a+0.6)*len*0.5,
+                           px+ox + Math.cos(a)*len, py+oy + Math.sin(a)*len);
+        x.stroke();
+      });
+    }
+    if (mono){
+      // $ monogram — pressed in like a luxury-house pattern. Canvas-u wraps the bag's GIRTH,
+      // so the glyphs are drawn rotated 90° to stand UPRIGHT on the flank. Regular diamond grid.
+      x.font = '700 58px Georgia'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      for (let row = 0; row < 2; row++)
+        for (let col = 0; col < 2; col++){
+          const tx = (128 + col*256 + (row%2)*128) % S, ty = 128 + row*256;
+          wrapped((ox, oy) => {
+            x.save();
+            x.translate(tx+ox, ty+oy);
+            x.rotate(Math.PI/2);
+            x.fillStyle = 'rgba(70,70,70,0.85)';
+            x.fillText('$', 2, 3);
+            x.fillStyle = 'rgba(196,196,196,0.9)';
+            x.fillText('$', 0, 0);
+            x.restore();
+          });
+        }
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(6, 3); // integer repeats: even spacing, no half-cut monogram rows
+    return t;
+  }
+  const leatherGrain = leatherGrainTexture(true);        // body panels: with $ monogram
+  const leatherGrainPlain = leatherGrainTexture(false);  // straps, lips, keepers, tag: grain only
+  const leather = new THREE.MeshPhysicalMaterial({
+    color: 0x080604,           // near-black with a warm cast — dyed leather, not grey steel
+    metalness: 0.0,
+    roughness: 0.55,           // diffuse body stays dark and matte
+    clearcoat: 0.35,           // lacquer layer reduced: only a narrow hot highlight survives
+    clearcoatRoughness: 0.36,
+    sheen: 0.8,                // velvety grazing-angle glow — this is what sells "leather"
+    sheenRoughness: 0.5,
+    sheenColor: 0x40382C,
+    specularIntensity: 0.5
+  });
+  leather.envMapIntensity = 0.4;
+  leather.bumpMap = leatherGrain;
+  leather.bumpScale = 0.7;
+  leather.roughnessMap = leatherGrain; // grain also breaks the smooth end-cap highlight
+  // monogram-free twin of the body leather — welt lips, keepers, tag: no $ fragments in the seams
+  const leatherPlain = leather.clone();
+  leatherPlain.bumpMap = leatherGrainPlain;
+  leatherPlain.roughnessMap = leatherGrainPlain;
+  // same shader-define set as `leather` (bump+roughness map, sheen, clearcoat) — shares ONE compiled
+  // program instead of forcing a second heavy physical-material compile on first load
+  const leatherDark = new THREE.MeshPhysicalMaterial({ color:0x080706, roughness:0.55, clearcoat:0.35, clearcoatRoughness:0.45, sheen:0.05, sheenRoughness:0.6, sheenColor:0x2A241C, specularIntensity:0.5 });
+  leatherDark.envMapIntensity = 0.25;
+  leatherDark.bumpMap = leatherGrainPlain;
+  leatherDark.bumpScale = 0.5;
+  leatherDark.roughnessMap = leatherGrainPlain;
+  // shared micro-scratch roughness map — kills the 'freshly rendered' look on all gold
+  const goldWear = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 256;
+    const x = c.getContext('2d');
+    x.fillStyle = '#6E6E6E'; x.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 130; i++) {
+      x.strokeStyle = Math.random() < 0.5 ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.18)';
+      x.lineWidth = 0.6 + Math.random();
+      const a = Math.random() * 7, x0 = Math.random() * 256, y0 = Math.random() * 256, l = 12 + Math.random() * 46;
+      x.beginPath(); x.moveTo(x0, y0); x.lineTo(x0 + Math.cos(a) * l, y0 + Math.sin(a) * l); x.stroke();
+    }
+    for (let i = 0; i < 40; i++) { // dull fingerprint smudges
+      const px = Math.random() * 256, py = Math.random() * 256, pr = 8 + Math.random() * 22;
+      const g = x.createRadialGradient(px, py, 0, px, py, pr);
+      g.addColorStop(0, 'rgba(255,255,255,0.10)'); g.addColorStop(1, 'rgba(110,110,110,0)');
+      x.fillStyle = g; x.beginPath(); x.arc(px, py, pr, 0, 7); x.fill();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    return t;
+  })();
+  const gold = new THREE.MeshStandardMaterial({ color:0xD4A72C, metalness:1, roughness:0.42, roughnessMap: goldWear });
+  gold.envMapIntensity = 1.45;
+  const goldBright = new THREE.MeshStandardMaterial({ color:0xF0DCA0, metalness:1, roughness:0.3, roughnessMap: goldWear });
+  goldBright.envMapIntensity = 1.6;
+
+  // coin face texture — high-res, embossed detail, "BAGZ" inscription
+  const maxAniso = renderer.capabilities.getMaxAnisotropy();
+  function coinFaceTexture(){
+    const S = 512, M = S/2;
+    const c = document.createElement('canvas'); c.width = c.height = S;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(M*0.8, M*0.75, S*0.08, M, M, M);
+    g.addColorStop(0,'#F8ECC0'); g.addColorStop(0.55,'#D4A72C'); g.addColorStop(0.85,'#B8922A'); g.addColorStop(1,'#8A6A1B');
+    x.fillStyle = g; x.beginPath(); x.arc(M, M, M, 0, 7); x.fill();
+    // milled dot ring
+    x.fillStyle = 'rgba(138,106,27,0.9)';
+    for (let i=0;i<72;i++){
+      const a = i/72*Math.PI*2;
+      x.beginPath(); x.arc(M+Math.cos(a)*(M*0.93), M+Math.sin(a)*(M*0.93), S*0.008, 0, 7); x.fill();
+    }
+    // double rim
+    x.strokeStyle = '#8A6A1B'; x.lineWidth = S*0.018;
+    x.beginPath(); x.arc(M, M, M*0.86, 0, 7); x.stroke();
+    x.lineWidth = S*0.006;
+    x.beginPath(); x.arc(M, M, M*0.8, 0, 7); x.stroke();
+    // circular inscription
+    x.fillStyle = '#6B5313'; x.font = `700 ${S*0.085}px Georgia`; x.textAlign = 'center'; x.textBaseline = 'middle';
+    const inscribe = (txt, startA, endA, r) => {
+      for (let i=0;i<txt.length;i++){
+        const a = startA + (endA-startA)*(i/(txt.length-1 || 1));
+        x.save(); x.translate(M+Math.cos(a)*r, M+Math.sin(a)*r); x.rotate(a+Math.PI/2); x.fillText(txt[i],0,0); x.restore();
+      }
+    };
+    inscribe('★ BAGZ ★', -Math.PI*0.82, -Math.PI*0.18, M*0.66);
+    inscribe('EST·2026', Math.PI*0.78, Math.PI*0.22, M*0.66);
+    // embossed $ with shadow offset
+    x.font = `900 ${S*0.42}px Georgia`;
+    x.fillStyle = 'rgba(107,83,19,0.55)'; x.fillText('$', M+S*0.012, M+S*0.02+S*0.012);
+    x.fillStyle = '#5C4712'; x.fillText('$', M, M+S*0.02);
+    x.fillStyle = '#F0DCA0'; x.fillText('$', M-S*0.006, M+S*0.02-S*0.006);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, maxAniso);
+    return t;
+  }
+  // reeded edge texture (the milled stripes on a coin rim)
+  function coinEdgeTexture(){
+    const c = document.createElement('canvas'); c.width = 128; c.height = 32;
+    const x = c.getContext('2d');
+    x.fillStyle = '#C79E2E'; x.fillRect(0,0,128,32);
+    x.fillStyle = '#A5852F'; // softer contrast: hard dark stripes alias badly in the mirror
+    for (let i=0;i<32;i++) x.fillRect(i*4, 0, 2, 32);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = THREE.RepeatWrapping; t.repeat.set(6,1);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, maxAniso);
+    return t;
+  }
+  const coinFace = new THREE.MeshStandardMaterial({ map: coinFaceTexture(), metalness:0.92, roughness:0.5, roughnessMap: goldWear });
+  coinFace.envMapIntensity = 1.3;
+  const coinSide = new THREE.MeshStandardMaterial({ map: coinEdgeTexture(), metalness:1, roughness:0.45 });
+  coinSide.envMapIntensity = 1.2;
+
+  // soft round sprite for all dust/bokeh points — Points without a map render as hard squares
+  const softDot = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(32, 32, 2, 32, 32, 30);
+    g.addColorStop(0, 'rgba(255,240,200,1)');
+    g.addColorStop(0.4, 'rgba(255,232,170,0.5)');
+    g.addColorStop(1, 'rgba(255,232,170,0)');
+    x.fillStyle = g; x.beginPath(); x.arc(32, 32, 31, 0, 7); x.fill();
+    return new THREE.CanvasTexture(c);
+  })();
+
+  // ---- the bag (holdall silhouette: long soft barrel, twin body straps feeding rolled handles) ----
+  const bag = new THREE.Group();
+
+  // body: duffle barrel with flat-ish squared-off ends (superellipse lathe profile, no round caps)
+  const BODY_L = 1.9, BODY_R = 0.92, BODY_P = 4.2;
+  const bodyPts = [];
+  for (let i=0;i<=48;i++){
+    const yy = -BODY_L + (2*BODY_L)*i/48;
+    const rr = BODY_R * Math.pow(Math.max(0, 1 - Math.pow(Math.abs(yy)/BODY_L, BODY_P)), 1/BODY_P);
+    bodyPts.push(new THREE.Vector2(Math.max(rr, 0.001), yy));
+  }
+  // soft-body realism: low-frequency dents, gravity sag, slight asymmetry — never a perfect barrel
+  const bodyGeo = new THREE.LatheGeometry(bodyPts, 96);
+  {
+    const pos = bodyGeo.attributes.position;
+    const v = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++){
+      v.fromBufferAttribute(pos, i);
+      const r = Math.hypot(v.x, v.z);
+      if (r < 0.03) continue;                     // leave the squared end poles alone
+      const phi = Math.atan2(v.z, v.x);           // 0 = top crest (local +X becomes world +Y after rotation.z)
+      const u = v.y / BODY_L;                     // -1..1 along the bag
+      // deterministic sine noise, 3 octaves + one long asymmetric swell
+      let n = 0.55*Math.sin(phi*2 + u*2.4 + 0.7)
+            + 0.30*Math.sin(phi*3 - u*4.1 + 2.3)
+            + 0.15*Math.sin(phi*5 + u*7.3 + 4.1)
+            + 0.45*Math.sin(phi + 1.9)*Math.cos(u*1.6 + 0.6);
+      // keep the zipper crest taut, calm the ends so piping/corner protectors still fit
+      const topFade = THREE.MathUtils.smoothstep(Math.abs(phi), 0.22, 0.75);
+      const endFade = Math.pow(Math.max(0, Math.cos(u*Math.PI/2)), 2);
+      const amp = 0.045 * topFade * (0.3 + 0.7*endFade);
+      v.x += n*amp * (v.x/r);                     // displace along the radial direction
+      v.z += n*amp * (v.z/r);
+      // gravity: the underside flattens toward the floor, mass bulges sideways
+      const down = Math.max(0, -v.x/r);           // 1 at the very bottom
+      v.x += down*down * 0.048 * (r/BODY_R);      // flatten (lifts bottom verts ~0.046 world units)
+      v.z *= 1 + down*down*0.055;                 // squashed mass pushes outward
+      // slight front/back lean — zeroed at the crest so the zipper seam stays at z = 0
+      v.z += 0.015*Math.sin(u*Math.PI + 0.4) * Math.min(1, Math.abs(phi)/0.6);
+      pos.setXYZ(i, v.x, v.y, v.z);
+    }
+    bodyGeo.computeVertexNormals();
+  }
+  const body = new THREE.Mesh(bodyGeo, leather);
+  body.rotation.z = Math.PI/2;
+  body.scale.set(0.96, 1, 1);
+  body.position.y = 0.9;
+  bag.add(body);
+
+  // gold piping seams framing the end panels
+  const piping = new THREE.MeshStandardMaterial({ color:0x8A6A1B, metalness:0.85, roughness:0.3 });
+  for (const px of [-1.52, 1.52]){
+    const seam = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.018, 8, 60), piping);
+    seam.position.set(px, 0.9, 0);
+    seam.rotation.y = Math.PI/2;
+    seam.scale.set(1, 0.96, 1);
+    bag.add(seam);
+  }
+
+  // gold feet studs — pre-rotated against the base roll (bag.rotation.x = 0.1) so all four touch down
+  {
+    const c0 = Math.cos(-0.1), s0 = Math.sin(-0.1);
+    for (const [fx, fz] of [[-1.15,0.42],[-1.15,-0.42],[1.15,0.42],[1.15,-0.42]]){
+      const stud = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 12), gold);
+      stud.scale.y = 0.5;
+      stud.position.set(fx, 0.03*c0 - fz*s0, 0.03*s0 + fz*c0);
+      bag.add(stud);
+    }
+  }
+
+  // twin body straps: flat webbing with wobble, dashed stitch thread on both edges
+  // dashed thread: lit material + alpha dashes — MeshBasic glows in shadow and screams CG
+  const stitchDashTex = (() => {
+    const c = document.createElement('canvas'); c.width = 128; c.height = 8;
+    const x = c.getContext('2d');
+    x.fillStyle = '#000'; x.fillRect(0, 0, 128, 8);
+    x.fillStyle = '#fff';
+    for (let i = 0; i < 8; i++) x.fillRect(i * 16 + 2, 1, 9, 6);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(12, 1);
+    return t;
+  })();
+  const stitchMat = new THREE.MeshStandardMaterial({
+    color: 0xCBB98C, roughness: 0.9, metalness: 0,
+    alphaMap: stitchDashTex, alphaTest: 0.5
+  });
+  // shared wobble displacement: strap AND its stitch rings must ride the SAME surface —
+  // a fixed-radius stitch ring gets swallowed wherever the wobbling strap bulges past it (flicker)
+  function wobbleRing(g, seedA) {
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++) {
+      const x0 = p.getX(i), y0 = p.getY(i), z0 = p.getZ(i);
+      const a = Math.atan2(y0, x0);
+      const n = Math.sin(a * 4 + seedA) * 0.5 + Math.sin(a * 9 + seedA * 2.7) * 0.3 + Math.sin(a * 15 + seedA * 1.3) * 0.2;
+      const s = 1 + n * 0.014;
+      let xN = x0 * s, yN = y0 * s;
+      // follow the body's gravity flatten so the strap hugs the lifted underside
+      const rN = Math.hypot(xN, yN) || 1;
+      const dn = Math.max(0, -yN / rN);
+      yN += dn * dn * 0.05;
+      p.setXYZ(i, xN, yN, z0);
+    }
+    g.computeVertexNormals();
+    return g;
+  }
+  // webbing, not tube: flattened torus cross-section with a per-strap wobble seed
+  function makeStrapGeo(seedA) {
+    const g = new THREE.TorusGeometry(0.925, 0.034, 10, 96);
+    g.scale(1, 1, 1.9); // flatten the tube into webbing: ~0.13 wide, 0.034 thick
+    return wobbleRing(g, seedA);
+  }
+  for (const sx of [-0.45, 0.45]){
+    const strap = new THREE.Mesh(makeStrapGeo(sx * 7.3), leatherDark);
+    strap.position.set(sx, 0.9, 0);
+    strap.rotation.y = Math.PI/2;
+    strap.scale.set(1, 0.96, 1);
+    bag.add(strap);
+    for (const off of [-0.052, 0.052]){
+      // same seed = same wobble: the thread rides the strap edge instead of hovering over the body
+      const stitchRing = new THREE.Mesh(wobbleRing(new THREE.TorusGeometry(0.951, 0.0065, 6, 96), sx * 7.3), stitchMat);
+      stitchRing.position.set(sx + off, 0.9, 0);
+      stitchRing.rotation.y = Math.PI/2;
+      stitchRing.scale.set(1, 0.96, 1);
+      bag.add(stitchRing);
+    }
+    // strap keepers front and back
+    for (const kz of [0.955, -0.955]){
+      const keeper = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.2, 0.07), leatherPlain);
+      keeper.position.set(sx, 0.86, kz*0.96);
+      bag.add(keeper);
+    }
+  }
+
+  // rolled handles with gold grommet rosettes at the anchor points
+  for (const hz of [-0.22, 0.22]){
+    const h = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.042, 12, 48, Math.PI), leatherDark);
+    h.position.set(0, 1.72, hz);
+    bag.add(h);
+    for (const ax of [-0.45, 0.45]){
+      const rosette = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.03, 20), gold);
+      rosette.position.set(ax, 1.7, hz);
+      bag.add(rosette);
+      const grommet = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.011, 8, 20), goldBright);
+      grommet.position.set(ax, 1.72, hz);
+      grommet.rotation.x = Math.PI/2;
+      bag.add(grommet);
+    }
+  }
+
+  // side carry handle on the end panel
+  const endHandle = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.04, 10, 32, Math.PI), leatherDark);
+  endHandle.position.set(1.86, 0.95, 0);
+  endHandle.rotation.z = -Math.PI/2;
+  bag.add(endHandle);
+  for (const ey of [-0.26, 0.26]){
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.025, 16), gold);
+    cap.rotation.z = Math.PI/2;
+    cap.position.set(1.87, 0.95 + ey, 0);
+    bag.add(cap);
+  }
+
+  // engraved gold nameplate under the glasses
+  const plateFace = (() => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0,0,256,64);
+    g.addColorStop(0,'#F5E4AE'); g.addColorStop(0.5,'#D4A72C'); g.addColorStop(1,'#8A6A1B');
+    x.fillStyle = g; x.fillRect(0,0,256,64);
+    x.strokeStyle = '#6B5313'; x.lineWidth = 5; x.strokeRect(6,6,244,52);
+    x.fillStyle = '#3A2D0B'; x.font = '700 34px Georgia'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.letterSpacing = '10px';
+    x.fillText('BAGZ', 132, 35);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, maxAniso);
+    return new THREE.MeshStandardMaterial({ map:t, metalness:0.85, roughness:0.25 });
+  })();
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.125, 0.02), [gold, gold, gold, gold, plateFace, gold]);
+  plate.position.set(0, 0.58, 0.9); // on the surface (z≈0.858 there) instead of buried in the leather
+  plate.rotation.x = 0.38;
+  bag.add(plate);
+
+  // gold corner protectors on the end-panel rims
+  for (const px of [-1.52, 1.52]){
+    for (const baseA of [Math.PI*0.25, Math.PI*0.75, Math.PI*1.25, Math.PI*1.75]){
+      const corner = new THREE.Mesh(new THREE.TorusGeometry(0.82, 0.022, 8, 14, 0.5), gold);
+      corner.position.set(px, 0.9, 0);
+      corner.rotation.y = Math.PI/2;
+      corner.rotation.x = baseA - 0.25;
+      corner.scale.set(1, 0.96, 1);
+      bag.add(corner);
+    }
+  }
+
+
+  // ---- CLOSED top zipper along the crest + panel seams ----
+  const zipper = new THREE.Group();
+  const rrX = x => BODY_R * Math.pow(Math.max(0, 1 - Math.pow(Math.abs(x)/BODY_L, BODY_P)), 1/BODY_P);
+  const crestY = x => 0.9 + 0.96 * rrX(x);              // top seam line at z = 0
+  const surfY = (x, z) => {                             // body surface height at side offset z
+    const r = rrX(x);
+    return 0.9 + 0.96 * Math.sqrt(Math.max(0, r*r - z*z));
+  };
+  const crestSlope = x => (crestY(x + 0.01) - crestY(x - 0.01)) / 0.02;
+  const ZIP_X = 1.35;                                   // zipper runs x = -1.35 .. 1.35
+
+  // (a) two leather welt lips meeting over the seam, dashed stitch line on each outer edge
+  for (const zs of [-1, 1]){
+    const lipPts = [], stitchPts = [];
+    for (let i = 0; i <= 40; i++){
+      const x = -ZIP_X + (2*ZIP_X)*i/40;
+      lipPts.push(new THREE.Vector3(x, surfY(x, 0.068) + 0.010, zs*0.068));
+      stitchPts.push(new THREE.Vector3(x, surfY(x, 0.115) + 0.008, zs*0.115));
+    }
+    zipper.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(lipPts), 48, 0.032, 10), leatherPlain));
+    zipper.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(stitchPts), 48, 0.0045, 6), stitchMat));
+  }
+
+  // (b) raised panel seams + second stitch rows further out — run past the zipper ends
+  for (const zs of [-1, 1]){
+    const seamPts = [], stPts = [];
+    for (let i = 0; i <= 44; i++){
+      const x = -1.55 + 3.1*i/44;
+      seamPts.push(new THREE.Vector3(x, surfY(x, 0.19) + 0.008, zs*0.19));
+      stPts.push(new THREE.Vector3(x, surfY(x, 0.225) + 0.006, zs*0.225));
+    }
+    zipper.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(seamPts), 52, 0.014, 8), leatherDark));
+    zipper.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(stPts), 52, 0.004, 6), stitchMat));
+  }
+
+  // (c) ONE meshed row of teeth in the groove — alternating tapes, staggered like a real closed zip
+  const TEETH = mobile ? 56 : 90;
+  const zipToothGeo = new THREE.BoxGeometry(0.034, 0.026, 0.06); // big enough to read as a gold line from the hero cam
+  const teethA = new THREE.InstancedMesh(zipToothGeo, gold, Math.ceil(TEETH/2));
+  const teethB = new THREE.InstancedMesh(zipToothGeo, goldBright, Math.floor(TEETH/2));
+  const zDummy = new THREE.Object3D();
+  let ai = 0, bi = 0;
+  for (let i = 0; i < TEETH; i++){
+    const x = -ZIP_X + (2*ZIP_X)*i/(TEETH-1);
+    zDummy.position.set(x, crestY(x) + 0.02, i%2 ? 0.011 : -0.011);   // interlocking offset
+    zDummy.rotation.set(0, (i%2 ? 1 : -1)*0.06, Math.atan(crestSlope(x))); // slight yaw = bite
+    zDummy.updateMatrix();
+    if (i%2) teethB.setMatrixAt(bi++, zDummy.matrix);
+    else     teethA.setMatrixAt(ai++, zDummy.matrix);
+  }
+  zipper.add(teethA, teethB);
+
+  // (d) end stops
+  for (const xs of [-1, 1]){
+    const sx = xs * (ZIP_X + 0.05);
+    const stop = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.03, 0.075), gold);
+    stop.position.set(sx, crestY(sx) + 0.014, 0);
+    stop.rotation.z = Math.atan(crestSlope(sx));
+    zipper.add(stop);
+  }
+
+  // (e) slider parked near the right end, pull tab flopped back toward the middle
+  const zipSlider = new THREE.Group();
+  const sBody = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, 0.13), goldBright);
+  const sNose = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.042, 0.09), goldBright);
+  sNose.position.set(0.10, -0.004, 0);
+  const sBridge = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.032, 0.028), gold);
+  sBridge.position.set(-0.01, 0.04, 0);
+  const sRing = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.009, 8, 18), gold);
+  sRing.position.set(-0.06, 0.045, 0);
+  sRing.rotation.x = Math.PI/2;
+  const sTab = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.014, 0.055), gold);
+  sTab.position.set(-0.155, 0.038, 0);
+  sTab.rotation.z = -0.10;                              // tab rests on the bag, tip down-slope
+  zipSlider.add(sBody, sNose, sBridge, sRing, sTab);
+  zipSlider.position.set(1.22, crestY(1.22) + 0.028, 0);
+  zipSlider.rotation.z = Math.atan(crestSlope(1.22));
+  zipper.add(zipSlider);
+
+  bag.add(zipper);
+  // travelling light-run along the gold zipper teeth every few seconds
+  let zipGlint = null;
+  if (!reduced){
+    zipGlint = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: softDot, color: 0xFFF3C4, transparent: true, opacity: 0,
+      blending: THREE.AdditiveBlending, depthWrite: false
+    }));
+    zipGlint.scale.setScalar(0.3);
+    bag.add(zipGlint);
+  }
+
+  // ---- realistic cash: stacked single bills with gold bands ----
+  const billTopMat = (() => {
+    const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+    const x = c.getContext('2d');
+    x.fillStyle = '#B9CC96'; x.fillRect(0,0,512,256);
+    // fine guilloche-ish hatching
+    x.strokeStyle = 'rgba(36,66,31,0.22)'; x.lineWidth = 1;
+    for (let i=0;i<26;i++){ x.beginPath(); x.ellipse(256,128,200-i*7,96-i*3,0,0,7); x.stroke(); }
+    x.strokeStyle = '#2E4B33'; x.lineWidth = 10; x.strokeRect(18,18,476,220);
+    x.lineWidth = 3; x.strokeRect(38,38,436,180);
+    x.fillStyle = '#D3E0B4'; x.beginPath(); x.ellipse(256,128,92,76,0,0,7); x.fill();
+    x.strokeStyle = '#24421F'; x.lineWidth = 4; x.beginPath(); x.ellipse(256,128,92,76,0,0,7); x.stroke();
+    x.fillStyle = '#24421F'; x.font = '900 104px Georgia'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText('$', 256, 132);
+    x.font = '700 40px Georgia';
+    for (const [tx,ty] of [[88,68],[424,68],[88,192],[424,192]]) x.fillText('100', tx, ty);
+    x.font = '700 22px Georgia'; x.fillText('BAGZ RESERVE NOTE', 256, 60);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, maxAniso);
+    return new THREE.MeshStandardMaterial({ map:t, roughness:0.66, metalness:0.03 });
+  })();
+  const paperA = new THREE.MeshStandardMaterial({ color:0xA3B87F, roughness:0.72, metalness:0.03 });
+  // barely darker than paperA: strong alternation made stack edges read as stripy gaps
+  const paperB = new THREE.MeshStandardMaterial({ color:0x9CB077, roughness:0.76, metalness:0.03 });
+  const billGeo = new THREE.BoxGeometry(0.62, 0.02, 0.3);
+
+  // printed money straps: '$10K' band instead of anonymous gold — counted money flexes harder
+  const bandMat = (() => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 0, 256);
+    g.addColorStop(0, '#E2BC4E'); g.addColorStop(0.5, '#D4A72C'); g.addColorStop(1, '#A5852F');
+    x.fillStyle = g; x.fillRect(0, 0, 256, 256);
+    x.strokeStyle = 'rgba(64,45,6,0.85)'; x.lineWidth = 7;
+    x.beginPath(); x.moveTo(0, 22); x.lineTo(256, 22); x.moveTo(0, 234); x.lineTo(256, 234); x.stroke();
+    x.fillStyle = '#3A2D0B'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = '900 88px Georgia'; x.fillText('$10K', 128, 112);
+    x.font = '700 30px Georgia'; x.fillText('· BAGZ ·', 128, 186);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, maxAniso);
+    const m = new THREE.MeshStandardMaterial({ map: t, metalness: 0.85, roughness: 0.35, roughnessMap: goldWear });
+    m.envMapIntensity = 1.1;
+    return m;
+  })();
+  function makeStack(n){
+    const g = new THREE.Group();
+    for (let i=0;i<n;i++){
+      const m = i%2 ? paperB : paperA;
+      const bill = new THREE.Mesh(billGeo, i===n-1 ? [m,m,billTopMat,m,m,m] : m);
+      // banded money is strapped BRICK-TIGHT: near-zero jitter — visible steps read as a messy, buggy stack
+      bill.position.set((Math.random()-0.5)*0.006, i*0.021, (Math.random()-0.5)*0.006);
+      bill.rotation.y = (Math.random()-0.5)*0.015;
+      g.add(bill);
+    }
+    const band = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, n*0.021+0.005, 0.34),
+      [gold, gold, bandMat, gold, bandMat, bandMat] // print on the top face + both wrap straps
+    );
+    // band wraps VISIBLY over the top note (+3mm) and under the bottom (-3mm):
+    // flush = z-fighting flicker, sunken = the strap disappears under the top note's overhang
+    band.position.y = n*0.0105 - 0.0105;
+    g.add(band);
+    return g;
+  }
+
+  // single loose bill geometry — floor props and piles reuse it (the bag itself is zipped shut now)
+  const looseGeo = new THREE.BoxGeometry(0.62, 0.014, 0.3);
+
+  // gold-rim sunglasses: rounded extruded frames with a real hole, glossy lens inserts
+  const glasses = new THREE.Group();
+  function roundedRectShape(w, h, r) {
+    const s = new THREE.Shape();
+    const x = -w / 2, y = -h / 2;
+    s.moveTo(x + r, y);
+    s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+    s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+    s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+    return s;
+  }
+  const rimShape = roundedRectShape(0.36, 0.28, 0.1);
+  rimShape.holes.push(roundedRectShape(0.29, 0.21, 0.08));
+  const rimGeo = new THREE.ExtrudeGeometry(rimShape, { depth: 0.02, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.008, bevelSegments: 2, curveSegments: 10 });
+  const lensGeo = new THREE.ExtrudeGeometry(roundedRectShape(0.3, 0.22, 0.085), { depth: 0.006, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 2, curveSegments: 10 });
+  // both lenses must stay uniformly deep black with a soft glint — sharp env reflection turns one
+  // of the two counter-rotated lenses into a white sticker at certain bag yaws
+  const lensMat = new THREE.MeshPhysicalMaterial({ color: 0x070503, roughness: 0.28, metalness: 0, clearcoat: 0.5, clearcoatRoughness: 0.5, specularIntensity: 0.35 });
+  lensMat.envMapIntensity = 0.18;
+  for (const gx of [-0.21, 0.21]) {
+    const gRim = new THREE.Mesh(rimGeo, gold);
+    const lens = new THREE.Mesh(lensGeo, lensMat);
+    gRim.position.set(gx, 0, 0);
+    lens.position.set(gx, 0, 0.014);
+    gRim.rotation.y = Math.sign(gx) * -0.16; // lenses follow the barrel curvature
+    lens.rotation.y = Math.sign(gx) * -0.16;
+    glasses.add(gRim, lens);
+  }
+  const bridge = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.014, 8, 24, Math.PI), goldBright);
+  bridge.position.set(0, 0.05, 0.005);
+  glasses.add(bridge);
+  glasses.position.set(0, 1.26, 0.9); // clear of the dented leather surface (bulges up to z≈0.885)
+  glasses.rotation.x = -0.38;
+  bag.add(glasses);
+
+  // leather luggage tag with gold trim
+  const tag = new THREE.Group();
+  const tagLoop = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.012, 8, 24), gold);
+  tagLoop.position.set(0, 0.2, 0);
+  const tagStrap = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.17, 0.008), leatherDark);
+  tagStrap.position.set(0, 0.08, 0);
+  const tagBack = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.34, 0.012), gold);
+  tagBack.position.set(0, -0.14, 0);
+  const tagFront = new THREE.Mesh(new THREE.BoxGeometry(0.21, 0.31, 0.02), leatherPlain);
+  tagFront.position.set(0, -0.14, 0.004);
+  tag.add(tagLoop, tagStrap, tagBack, tagFront);
+  tag.position.set(1.72, 1.2, 0.42);
+  tag.rotation.set(-0.1, 0.45, -0.03); // plumb against the base roll; tiny z so it isn't machine-straight
+  bag.add(tag);
+
+  // $ charm hanging off the zipper pull, resting flat on the front top panel
+  const charm = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.035, 48), [coinSide, coinFace, coinFace]);
+  charm.scale.setScalar(0.8);
+  charm.position.set(1.0, 1.746, 0.26);   // surfY(1.0, 0.26) ≈ 1.732 + half thickness
+  charm.rotation.set(0.2, 0.35, 0.05);    // matches the local surface slope
+  bag.add(charm);
+  // three-link chain from the pull-tab tip down to the charm rim
+  const chainLinkGeo = new THREE.TorusGeometry(0.02, 0.007, 6, 14);
+  [[0.995, 1.792, 0.045, 0], [1.0, 1.779, 0.085, 1], [1.0, 1.764, 0.125, 0]].forEach(([lx, ly, lz, odd]) => {
+    const link = new THREE.Mesh(chainLinkGeo, goldBright);
+    link.position.set(lx, ly, lz);
+    link.rotation.set(odd ? 0.4 : 1.35, 0.6, 0.35); // alternating twist like a real chain
+    bag.add(link);
+  });
+
+  const bagBase = mobile ? 0.66 : 0.85; // mobile slightly larger: the bag must read between headline and CTA
+  bag.scale.setScalar(bagBase);
+  scene.add(bag);
+  // the duffel as a yaw-following ellipsoid — falling money must not pass through leather
+  function bagDeflect(d){
+    const s = bag.scale.x;
+    const ax = 2.05*s, ar = 1.12*s, cy = 0.9*s + bag.position.y;
+    const cB = Math.cos(bag.rotation.y), sB = Math.sin(bag.rotation.y);
+    const wx = d.x, wz = d.z - bag.position.z;
+    const lx = (wx*cB - wz*sB) / ax;
+    const lz = (wx*sB + wz*cB) / ar;
+    const ly = (d.y - cy) / ar;
+    const q = Math.sqrt(lx*lx + ly*ly + lz*lz);
+    if (q >= 1 || q < 0.05) return null;             // outside, or degenerate at the centre
+    const k = 1/q;                                    // uniform scale from the centre lands exactly on the shell
+    d.x = wx*k; d.z = bag.position.z + wz*k; d.y = cy + (d.y - cy)*k;
+    const ox = wx*k, oy = d.y - cy, oz = wz*k;        // cheap outward normal: radial from the bag centre
+    const ol = Math.hypot(ox, oy, oz) || 1;
+    return { x: ox/ol, y: oy/ol, z: oz/ol };
+  }
+
+  // ---- floor: mirror (black marble, not chrome) ----
+  if (!mobile){
+    const mirror = new Reflector(new THREE.CircleGeometry(9, 64), {
+      textureWidth: 2048, textureHeight: 2048, color: 0x504B42
+    });
+    mirror.rotation.x = -Math.PI/2;
+    scene.add(mirror);
+  } else {
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.MeshStandardMaterial({ color:0x14110A, roughness:0.35, metalness:0.6 }));
+    disc.rotation.x = -Math.PI/2;
+    scene.add(disc);
+  }
+  // marble character overlay: gold veins, distance fade, smudges, etched $ ring —
+  // reflection stays strong at the bag's contact point and dies toward the rim
+  const floorOverlayTex = (() => {
+    const S = 1024, c = document.createElement('canvas'); c.width = c.height = S;
+    const x = c.getContext('2d');
+    // radial fade: near-clear centre, smoky edge (also hides the hard mirror rim)
+    const vg = x.createRadialGradient(S/2, S/2, S * 0.1, S/2, S/2, S * 0.5);
+    vg.addColorStop(0, 'rgba(12,10,6,0.12)');
+    vg.addColorStop(0.5, 'rgba(12,10,6,0.42)');
+    vg.addColorStop(0.85, 'rgba(12,10,5,0.72)');
+    vg.addColorStop(1, 'rgba(14,12,7,0.96)');
+    x.fillStyle = vg; x.fillRect(0, 0, S, S);
+    // smoky marble clouds
+    for (let i = 0; i < 46; i++){
+      const cx = Math.random() * S, cy = Math.random() * S, cr = 40 + Math.random() * 130;
+      const cg = x.createRadialGradient(cx, cy, 0, cx, cy, cr);
+      cg.addColorStop(0, 'rgba(6,5,3,' + (0.05 + Math.random() * 0.1).toFixed(3) + ')');
+      cg.addColorStop(1, 'rgba(6,5,3,0)');
+      x.fillStyle = cg; x.beginPath(); x.arc(cx, cy, cr, 0, 7); x.fill();
+    }
+    // faint smudge streaks: polish marks breaking the clinical perfection
+    for (let i = 0; i < 700; i++){
+      x.fillStyle = 'rgba(' + (20 + Math.random() * 20 | 0) + ',' + (18 + Math.random() * 14 | 0) + ',10,' + (0.04 + Math.random() * 0.06).toFixed(2) + ')';
+      x.fillRect(Math.random() * S, Math.random() * S, 2 + Math.random() * 8, 1 + Math.random() * 3);
+    }
+    // gold veins: random walks, drawn twice (wide faint halo + bright core = etched look)
+    const drawVein = (vx, vy, ang, steps, w, alpha) => {
+      const pts = [[vx, vy]];
+      for (let s = 0; s < steps; s++){
+        ang += (Math.random() - 0.5) * 0.9;
+        vx += Math.cos(ang) * (6 + Math.random() * 10);
+        vy += Math.sin(ang) * (6 + Math.random() * 10);
+        pts.push([vx, vy]);
+      }
+      for (const [lw, la] of [[w * 3, alpha * 0.25], [w, alpha]]){
+        x.strokeStyle = 'rgba(212,167,44,' + la.toFixed(3) + ')';
+        x.lineWidth = lw; x.lineJoin = 'round'; x.beginPath();
+        pts.forEach(([qx, qy], k) => k ? x.lineTo(qx, qy) : x.moveTo(qx, qy));
+        x.stroke();
+      }
+    };
+    for (let i = 0; i < 16; i++){
+      const a = Math.random() * Math.PI * 2, rr = S * (0.16 + Math.random() * 0.32);
+      drawVein(S/2 + Math.cos(a) * rr, S/2 + Math.sin(a) * rr, Math.random() * Math.PI * 2,
+               20 + (Math.random() * 22 | 0), 1.4 + Math.random(), 0.13 + Math.random() * 0.08);
+    }
+    // etched $ ring around the centre (world radius ≈ 2.7 → disc r 9 maps to S/2)
+    const RING = S/2 * (2.7 / 9);
+    x.strokeStyle = 'rgba(212,167,44,0.2)'; x.lineWidth = 2;
+    x.beginPath(); x.arc(S/2, S/2, RING + 15, 0, 7); x.stroke();
+    x.beginPath(); x.arc(S/2, S/2, RING - 15, 0, 7); x.stroke();
+    x.font = '700 22px Georgia'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = 'rgba(212,167,44,0.26)';
+    for (let i = 0; i < 40; i++){
+      const a = i / 40 * Math.PI * 2;
+      x.save();
+      x.translate(S/2 + Math.cos(a) * RING, S/2 + Math.sin(a) * RING);
+      x.rotate(a + Math.PI/2);
+      x.fillText('$', 0, 0);
+      x.restore();
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, maxAniso);
+    return t;
+  })();
+  const floorOverlay = new THREE.Mesh(
+    new THREE.CircleGeometry(9, 64),
+    new THREE.MeshBasicMaterial({ map: floorOverlayTex, transparent: true, depthWrite: false })
+  );
+  floorOverlay.rotation.x = -Math.PI/2;
+  floorOverlay.position.y = 0.003;
+  floorOverlay.renderOrder = 2;
+  scene.add(floorOverlay);
+
+  // ---- gold bar pyramid: classic trapezoid ingots, stamped tops, deep saturated gold ----
+  // true ingot: wide base, four sloped sides, smaller flat top (mold-cast keystone)
+  const barGeo = (() => {
+    const g = new THREE.BoxGeometry(0.62, 0.16, 0.30);
+    const p = g.attributes.position;
+    for (let i = 0; i < p.count; i++){
+      if (p.getY(i) > 0){
+        p.setX(i, p.getX(i) * 0.76);
+        p.setZ(i, p.getZ(i) * 0.68);
+      }
+    }
+    g.computeVertexNormals();
+    return g;
+  })();
+  // deep cast gold — saturated, never washed out
+  const barMat = new THREE.MeshStandardMaterial({ color: 0xB98A1E, metalness: 1, roughness: 0.38, roughnessMap: goldWear });
+  barMat.envMapIntensity = 0.85;
+  // stamped top face: "BAGZ / 999.9 FINE GOLD" pressed into the metal like a mint mark
+  const barStampMat = (() => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+    const x = c.getContext('2d');
+    const g = x.createLinearGradient(0, 0, 256, 128);
+    g.addColorStop(0, '#D8AC3A'); g.addColorStop(0.45, '#C09122'); g.addColorStop(1, '#9C7418');
+    x.fillStyle = g; x.fillRect(0, 0, 256, 128);
+    // recessed frame: dark inner line + light catch below = embossed relief
+    x.strokeStyle = 'rgba(80,58,8,0.9)'; x.lineWidth = 5; x.strokeRect(14, 12, 228, 104);
+    x.strokeStyle = 'rgba(255,232,170,0.55)'; x.lineWidth = 2; x.strokeRect(18, 16, 224, 100);
+    const stamp = (txt, y, size) => {
+      x.font = `700 ${size}px Georgia`; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillStyle = 'rgba(255,236,180,0.7)'; x.fillText(txt, 128, y + 2); // light edge below
+      x.fillStyle = 'rgba(64,45,6,0.92)';    x.fillText(txt, 128, y);     // sunken face
+    };
+    stamp('BAGZ', 40, 42);
+    stamp('999.9 FINE GOLD', 82, 19);
+    stamp('· BB ·', 108, 13);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, maxAniso);
+    const m = new THREE.MeshStandardMaterial({ map: t, metalness: 1, roughness: 0.32, roughnessMap: goldWear });
+    m.envMapIntensity = 1.0;
+    return m;
+  })();
+  // pyramid layout: rows of 4/3/2/1 (3/2/1 on mobile), slight jitter so it reads hand-stacked
+  const barRows = mobile ? [3, 2, 1] : [4, 3, 2, 1];
+  const barSpots = []; // [x, y, z, yaw]
+  {
+    const zSpace = 0.33, yStep = 0.161; // bar height 0.16: upper base rests ON the lower top faces (+1mm seat)
+    for (let row = 0; row < barRows.length; row++){
+      const n = barRows[row];
+      for (let i = 0; i < n; i++){
+        barSpots.push([
+          (Math.random() - 0.5) * 0.05,
+          0.08 + row * yStep,
+          (i - (n - 1) / 2) * zSpace + (Math.random() - 0.5) * 0.02,
+          (Math.random() - 0.5) * 0.09
+        ]);
+      }
+    }
+  }
+  // loose bars dropped beside the pyramid
+  barSpots.push([0.55, 0.08, 0.72, 0.8]);
+  if (!mobile) barSpots.push([-0.5, 0.08, 0.8, -0.35]);
+
+  // stamp lives directly on the ingot's top face (BoxGeometry material group 2 = +y)
+  const barBodies = new THREE.InstancedMesh(barGeo, [barMat, barMat, barStampMat, barMat, barMat, barMat], barSpots.length);
+  const barDummy = new THREE.Object3D();
+  barSpots.forEach(([bx, by, bz, ry], i) => {
+    barDummy.rotation.set(0, ry, 0);
+    barDummy.position.set(bx, by, bz); barDummy.updateMatrix();
+    barBodies.setMatrixAt(i, barDummy.matrix);
+  });
+  const pyramid = new THREE.Group();
+  pyramid.add(barBodies);
+  pyramid.position.set(-2.65, 0, 0.1);
+  pyramid.rotation.y = 0.38;
+  scene.add(pyramid);
+  // ---- CUBAN LINK CHAIN: draped over the ingot pyramid, medallion pooled at its end ----
+  if (!mobile){
+    const chainTopY = 0.08 + (barRows.length - 1) * 0.161 + 0.085; // upper face of the top ingot
+    const chainCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-0.06, 0.03, 0.98),
+      new THREE.Vector3( 0.00, 0.03, 0.74),
+      new THREE.Vector3( 0.03, 0.24, 0.50),
+      new THREE.Vector3( 0.05, 0.47, 0.28),
+      new THREE.Vector3( 0.04, chainTopY, 0.09),
+      new THREE.Vector3( 0.02, chainTopY, -0.09),
+      new THREE.Vector3( 0.00, 0.45, -0.30),
+      new THREE.Vector3(-0.03, 0.20, -0.52),
+      new THREE.Vector3(-0.06, 0.03, -0.78),
+      new THREE.Vector3(-0.16, 0.03, -1.00)
+    ]);
+    const LINKS = 42;
+    const chainLinkG = new THREE.TorusGeometry(0.05, 0.019, 8, 14);
+    chainLinkG.scale(1.25, 0.85, 1); // oval cuban profile
+    // dedicated chain gold: deep and saturated — goldBright blows out to white rope under the key light
+    const chainMat = new THREE.MeshStandardMaterial({ color: 0xC9962B, metalness: 1, roughness: 0.32, roughnessMap: goldWear });
+    chainMat.envMapIntensity = 1.0;
+    const chain = new THREE.InstancedMesh(chainLinkG, chainMat, LINKS);
+    const cld = new THREE.Object3D();
+    const AX = new THREE.Vector3(1, 0, 0);
+    for (let i = 0; i < LINKS; i++){
+      const u = i / (LINKS - 1);
+      cld.position.copy(chainCurve.getPointAt(u));
+      cld.quaternion.setFromUnitVectors(AX, chainCurve.getTangentAt(u));
+      cld.rotateX(i % 2 ? Math.PI / 2 : 0.15); // alternating interlock twist
+      cld.updateMatrix();
+      chain.setMatrixAt(i, cld.matrix);
+    }
+    pyramid.add(chain);
+    // $ medallion leaning at the chain's end, face tipped toward the camera — flat on the floor it was an unreadable dot
+    const medal = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.03, 40), [coinSide, coinFace, coinFace]);
+    medal.position.set(-0.02, 0.135, 1.09); // clear of the first chain link at (-0.06, 0.98)
+    medal.rotation.set(Math.PI/2 - 0.42, 0.55, 0);
+    pyramid.add(medal);
+  }
+  // ---- coins: one InstancedMesh — flat scatter, neat towers, leaners, far glints ----
+  const coinGeo = new THREE.CylinderGeometry(0.16, 0.16, 0.035, 48);
+  const coinXf = []; // [x, y, z, tilt, yaw]
+  const occupied = [];
+  const blockers = [ // keep-clear circles: ingot pyramid + the three cash piles
+    [-2.65, 0.1, 1.15],
+    [2.5, 0.5, 0.9],
+    [-2.1, -1.5, 0.65],
+    [-1.4, 1.7, 0.8]
+  ];
+  const spotFree = (x, z, r) =>
+    !blockers.some(([bx, bz, br]) => (x - bx) * (x - bx) + (z - bz) * (z - bz) < br * br) &&
+    !occupied.some(([ox, oz, orr]) => (x - ox) * (x - ox) + (z - oz) * (z - oz) < (orr + r) * (orr + r));
+
+  // neat little towers first, so the scatter keeps clear of them
+  const towers = mobile ? [[1.35, 1.6, 5], [3.4, -0.7, 4]] : [[1.35, 1.6, 6], [-0.9, 2.3, 4], [3.4, -0.7, 5]];
+  for (const [tx, tz, n] of towers){
+    occupied.push([tx, tz, 0.2]);
+    for (let i = 0; i < n; i++)
+      coinXf.push([tx + (Math.random() - 0.5) * 0.02, 0.0195 + i * 0.036, tz + (Math.random() - 0.5) * 0.02, 0, Math.random() * 7]);
+  }
+  // flat scatter with occasional two-coin pairs — never ruler-flat, always a whisper of tilt
+  const SCATTER = mobile ? 14 : 26;
+  let placed = 0, tries = 0;
+  while (placed < SCATTER && tries++ < 500){
+    const a = Math.random() * Math.PI * 2, r = 1.9 + Math.random() * 2.8;
+    const cx = Math.cos(a) * r, cz = Math.sin(a) * r * 0.7 + 0.4;
+    // keep out of BOTH bag sweep discs: the hero spin around the origin (half-length ~1.75)
+    // and the late-scroll recede position at (0,-1.9) — otherwise coins end up stuck in the leather
+    if (Math.hypot(cx, cz) < 1.85 || Math.hypot(cx, cz + 1.9) < 1.15) continue;
+    if (!spotFree(cx, cz, 0.17)) continue;
+    occupied.push([cx, cz, 0.17]); placed++;
+    coinXf.push([cx, 0.023, cz, (Math.random() - 0.5) * 0.14, Math.random() * 7]);
+    if (Math.random() < 0.35) // pair coin: seat 0.075 = collision-free at every tilt/yaw combination
+      coinXf.push([cx + (Math.random() - 0.5) * 0.04, 0.075, cz + (Math.random() - 0.5) * 0.04, (Math.random() - 0.5) * 0.06, Math.random() * 7]);
+  }
+  // leaners: rim on the floor, TOP tipping onto the prop.
+  // NEGATIVE tilt is essential: +tilt points the coin AXIS at the prop, which tips the top AWAY
+  // and rams the bottom rim into the prop base — the inverted-lean bug the audit caught.
+  const LEAN = 0.42, leanY = 0.16 * Math.cos(LEAN) + 0.004;
+  for (const [lx, lz, px2, pz2] of [
+    [-2.12, 0.33, -2.21, 0.36],   // pyramid long face — coin plane (24.1°) lies almost flush on the bar flank (24.9°)
+    [-2.38, -0.32, -2.47, -0.29], // same face, other end
+    [ 2.17, 0.50,  2.5,  0.5],    // cash pile right — top rim onto b1's end face at stack height
+    [-0.90, 2.50, -0.9, 2.3]      // front coin tower — top rim onto the tower's top edge
+  ]){
+    const yaw = Math.atan2(px2 - lx, pz2 - lz); // local +z points at the contact
+    coinXf.push([lx, leanY, lz, -(Math.PI/2 - LEAN), yaw]);
+  }
+  // far glints: coins standing on edge deep in the fog, catching the key light
+  const GLINTS = mobile ? 5 : 10;
+  for (let i = 0; i < GLINTS; i++)
+    coinXf.push([(Math.random() - 0.5) * 11, 0.161, -3.4 - Math.random() * 3.4, Math.PI/2, Math.random() * 7]);
+
+  const coinField = new THREE.InstancedMesh(coinGeo, [coinSide, coinFace, coinFace], coinXf.length);
+  const cd0 = new THREE.Object3D();
+  cd0.rotation.order = 'YXZ'; // yaw first, then tilt — leaners stay physically plausible
+  coinXf.forEach(([cx, cy, cz2, tilt, yaw], i) => {
+    cd0.position.set(cx, cy, cz2);
+    cd0.rotation.set(tilt, yaw, 0);
+    cd0.updateMatrix();
+    coinField.setMatrixAt(i, cd0.matrix);
+  });
+  scene.add(coinField);
+
+  // ---- banded cash piles + scattered bills on the floor (mirrored by the reflector) ----
+  const billTopFaces = [paperA, paperA, billTopMat, paperA, paperA, paperA];
+  const cashPiles = new THREE.Group();
+  // pile 1 (right of the bag): three tidy stacks, one crosswise on top
+  {
+    const p = new THREE.Group();
+    const b1 = makeStack(9); b1.position.set(0, 0.011, 0);       b1.rotation.y = 0.15;
+    const b2 = makeStack(9); b2.position.set(0.02, 0.011, 0.39); b2.rotation.y = -0.1; // 0.39: b1/b2 ends interpenetrated at 0.34
+    const b3 = makeStack(7); b3.position.set(0.65, 0.011, 0.16); b3.rotation.y = 1.35;
+    const tp = makeStack(6); tp.position.set(0.03, 0.205, 0.17); // +5mm seat: its tilted corner sank into b2
+    tp.rotation.set(0.01, Math.PI/2 + 0.2, 0.015);
+    // ---- BAGZ BLACK CARD: matte black metal card tossed on the crosswise bundle ----
+    const cardFaceMat = (() => {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 322;
+      const x = c.getContext('2d');
+      x.fillStyle = '#0B0906'; x.fillRect(0, 0, 512, 322);
+      for (let i = 0; i < 700; i++){ // brushed-metal micro streaks
+        x.fillStyle = 'rgba(255,236,180,' + (Math.random() * 0.05).toFixed(3) + ')';
+        x.fillRect(Math.random() * 512, Math.random() * 322, 2 + Math.random() * 26, 1);
+      }
+      x.strokeStyle = 'rgba(212,167,44,0.5)'; x.lineWidth = 3; x.strokeRect(9, 9, 494, 304);
+      const goldGrad = (y0, y1) => {
+        const g = x.createLinearGradient(0, y0, 0, y1);
+        g.addColorStop(0, '#F5E4AE'); g.addColorStop(0.5, '#D4A72C'); g.addColorStop(1, '#8A6A1B');
+        return g;
+      };
+      // gold chip with contact lines
+      x.fillStyle = goldGrad(120, 186);
+      x.beginPath(); x.roundRect(56, 120, 84, 66, 9); x.fill();
+      x.strokeStyle = 'rgba(70,50,8,0.85)'; x.lineWidth = 2.5;
+      x.beginPath();
+      x.moveTo(56, 142); x.lineTo(140, 142); x.moveTo(56, 164); x.lineTo(140, 164);
+      x.moveTo(84, 120); x.lineTo(84, 186); x.moveTo(112, 120); x.lineTo(112, 186);
+      x.stroke();
+      // embossed lettering: dark drop shadow + gold face
+      const emboss = (txt, fx, fy, font, align) => {
+        x.font = font; x.textAlign = align; x.textBaseline = 'middle';
+        x.fillStyle = 'rgba(0,0,0,0.9)'; x.fillText(txt, fx + 1, fy + 3);
+        x.fillStyle = goldGrad(fy - 18, fy + 18); x.fillText(txt, fx, fy);
+      };
+      emboss('BAGZ', 52, 66, "700 58px 'Saira Stencil One', Georgia", 'left');
+      emboss('BLACK', 236, 72, "600 22px 'IBM Plex Mono', monospace", 'left');
+      emboss('$', 452, 66, '900 54px Georgia', 'center');
+      emboss('•••• •••• •••• 0080', 52, 236, "600 34px 'IBM Plex Mono', monospace", 'left');
+      emboss('BAG HOLDER', 52, 288, "600 20px 'IBM Plex Mono', monospace", 'left');
+      emboss('SINCE 2026', 460, 288, "600 20px 'IBM Plex Mono', monospace", 'right');
+      const t = new THREE.CanvasTexture(c);
+      t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, maxAniso);
+      return new THREE.MeshPhysicalMaterial({
+        map: t, metalness: 0.45, roughness: 0.5,
+        clearcoat: 0.6, clearcoatRoughness: 0.3
+      });
+    })();
+    const card = new THREE.Mesh(
+      new THREE.BoxGeometry(0.44, 0.012, 0.277),
+      [gold, gold, cardFaceMat, leatherDark, gold, gold] // gold-milled edges, printed face
+    );
+    // propped in FRONT of the pile: bottom edge flat on the marble, upper third resting on the
+    // front-top corner of stack b2 — never buried inside a bundle. The wrapper group applies the
+    // yaw AFTER the lean, so the bottom edge stays level on the floor.
+    const cardTilt = new THREE.Group();
+    card.rotation.set(0.95, 0, 0);            // pure lean, printed +y face up-forward
+    cardTilt.add(card);
+    cardTilt.rotation.y = -0.05;               // keep the yaw tiny: the 0.44-wide card swings a corner back into the pile otherwise
+    // leaning on b2's NEW front face (b2 moved to z 0.39 → face ≈0.57): the card plane crosses the
+    // face-top corner at 0.579..0.601 across the card's width — touches one end, never gets pierced
+    cardTilt.position.set(0.06, 0.117, 0.648);
+    p.add(b1, b2, b3, tp, cardTilt);
+    p.position.set(2.5, 0, 0.5); p.rotation.y = -0.5;
+    cashPiles.add(p);
+  }
+  // pile 2 (back-left, half in shadow): two stacks, top one askew
+  {
+    const p = new THREE.Group();
+    const s1 = makeStack(8); s1.position.set(0, 0.011, 0); s1.rotation.y = -0.3;
+    const s2 = makeStack(5); s2.position.set(0.1, 8 * 0.021 + 0.013, 0.02); s2.rotation.set(0.03, 0.6, -0.02);
+    p.add(s1, s2);
+    p.position.set(-2.1, 0, -1.5); p.rotation.y = 0.7;
+    cashPiles.add(p);
+  }
+  // pile 3 (front-left): knocked over — one bundle slid off, loose bills fanned out
+  {
+    const p = new THREE.Group();
+    const rest = makeStack(5); rest.position.set(-0.15, 0.011, -0.1); rest.rotation.y = 0.5;
+    const slid = makeStack(5); // slid off: low corner ON the floor, high end ON the 5-note stack
+    slid.position.set(0.16, 0.069, -0.04); // audit contact solve: lowest corner touches the marble
+    slid.rotation.set(0.04, -0.20, -0.19); // yaw reoriented so the high end actually rests on `rest`
+    p.add(rest, slid);
+    for (let i = 0; i < 8; i++){ // fanned arc of single bills spilling out — all printed, no blank paper tiles
+      const bill = new THREE.Mesh(looseGeo, billTopFaces);
+      const a = 0.75 + i * 0.22;
+      bill.position.set(0.3 + Math.cos(a) * 0.34, 0.008 + i * 0.0035, 0.15 + Math.sin(a) * 0.3);
+      bill.rotation.y = -a + Math.PI/2;
+      p.add(bill);
+    }
+    p.position.set(-1.4, 0, 1.7); p.rotation.y = -0.25;
+    cashPiles.add(p);
+  }
+  scene.add(cashPiles);
+
+  // fake contact AO: radial black sprites — objects finally sit ON the floor instead of floating on it
+  const aoTex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(64, 64, 4, 64, 64, 62);
+    g.addColorStop(0, 'rgba(0,0,0,0.85)');
+    g.addColorStop(0.55, 'rgba(0,0,0,0.4)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(c);
+  })();
+  const aoGeo = new THREE.CircleGeometry(1, 32);
+  function aoBlob(x, z, rx, rz, opacity, yaw){
+    const m = new THREE.Mesh(aoGeo, new THREE.MeshBasicMaterial({
+      map: aoTex, transparent: true, opacity, depthWrite: false, fog: false
+    }));
+    m.rotation.x = -Math.PI/2;
+    m.rotation.z = yaw || 0;          // acts as yaw on the floor plane (euler XYZ)
+    m.scale.set(rx, rz, 1);
+    m.position.set(x, 0.004, z);      // above the marble overlay (0.003), below all props
+    m.renderOrder = 3;                // after floorOverlay (renderOrder 2)
+    scene.add(m);
+    return m;
+  }
+  const bagAO = aoBlob(0, 0, 1.9, 1.15, 0.6);                     // duffel (updated in the loop)
+  aoBlob(-2.65, 0.1, 0.85, 1.1, 0.5, 0.38);                       // ingot pyramid
+  aoBlob(2.5, 0.6, 0.8, 0.6, 0.45, -0.5);                         // cash pile right
+  aoBlob(-2.1, -1.5, 0.6, 0.5, 0.45, 0.7);                        // cash pile back-left
+  aoBlob(-1.35, 1.72, 0.7, 0.55, 0.4, -0.25);                     // tipped pile
+  for (const [tx, tz] of towers) aoBlob(tx, tz, 0.26, 0.26, 0.5); // coin towers
+
+  // loose scattered bills between the props
+  const SCAT_BILLS = mobile ? 7 : 12;
+  for (let i = 0; i < SCAT_BILLS; i++){
+    const b = new THREE.Mesh(looseGeo, billTopFaces); // every visible face printed — blank rectangles read as paper tiles
+    const a = Math.random() * Math.PI * 2, r = 1.5 + Math.random() * 2.8;
+    const bx = Math.cos(a) * r, bz = Math.sin(a) * r * 0.7 + 0.45;
+    if ((bx + 2.65) * (bx + 2.65) + (bz - 0.1) * (bz - 0.1) < 1.2){ i--; continue; } // keep off the ingots
+    if (Math.hypot(bx, bz) < 1.85 || Math.hypot(bx, bz + 1.9) < 1.15){ i--; continue; } // keep out of the bag sweep discs
+    if (blockers.some(([px, pz, pr]) => (bx - px) * (bx - px) + (bz - pz) * (bz - pz) < pr * pr)){ i--; continue; } // never poke into a banded stack
+    if (towers.some(([tx, tz]) => (bx - tx) * (bx - tx) + (bz - tz) * (bz - tz) < 0.3025)){ i--; continue; }        // …or into a coin tower (0.55² = bill half-diagonal + coin r + margin)
+    b.position.set(bx, 0.008 + (i % 3) * 0.005, bz);
+    b.rotation.y = Math.random() * 7;
+    scene.add(b);
+  }
+
+  // ---- the vault: gradient backdrop, vault-door silhouette, columns, god-rays, bokeh ----
+  // warm graded backdrop (fog-immune) so the void has depth instead of dead black
+  {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+    const x = c.getContext('2d');
+    x.fillStyle = '#0A0805'; x.fillRect(0, 0, 1024, 512);
+    let g = x.createRadialGradient(512, 340, 60, 512, 340, 520); // warm pool behind the bag
+    g.addColorStop(0, '#271E0E'); g.addColorStop(0.4, '#171106'); g.addColorStop(1, 'rgba(10,8,5,0)');
+    x.fillStyle = g; x.fillRect(0, 0, 1024, 512);
+    g = x.createLinearGradient(0, 300, 0, 420); // faint gold horizon line
+    g.addColorStop(0, 'rgba(212,167,44,0)'); g.addColorStop(0.5, 'rgba(212,167,44,0.05)'); g.addColorStop(1, 'rgba(212,167,44,0)');
+    x.fillStyle = g; x.fillRect(0, 300, 1024, 120);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    const backdrop = new THREE.Mesh(
+      new THREE.PlaneGeometry(50, 24),
+      new THREE.MeshBasicMaterial({ map: t, fog: false, depthWrite: false })
+    );
+    backdrop.position.set(0, 6, -14);
+    backdrop.renderOrder = -1;
+    scene.add(backdrop);
+  }
+  // vault door behind the bag — dark steel, only the gold edges catch the light
+  {
+    const vault = new THREE.Group();
+    const steel = new THREE.MeshStandardMaterial({ color: 0x141109, metalness: 0.85, roughness: 0.38 });
+    steel.envMapIntensity = 0.5;
+    const door = new THREE.Mesh(new THREE.CylinderGeometry(2.7, 2.7, 0.34, 56), steel);
+    door.rotation.x = Math.PI/2;
+    door.position.y = 2.7;
+    vault.add(door);
+    const doorRim = new THREE.Mesh(new THREE.TorusGeometry(2.7, 0.09, 12, 72), gold);
+    doorRim.position.y = 2.7;
+    vault.add(doorRim);
+    const innerRim = new THREE.Mesh(new THREE.TorusGeometry(1.9, 0.05, 10, 64), gold);
+    innerRim.position.set(0, 2.7, 0.18);
+    vault.add(innerRim);
+    const boltGeo = new THREE.CylinderGeometry(0.07, 0.09, 0.07, 10);
+    const bolts = new THREE.InstancedMesh(boltGeo, gold, 20); // deep gold — pale goldBright reads as grey steel head-on
+    const bd = new THREE.Object3D();
+    for (let i = 0; i < 20; i++){
+      const a = i / 20 * Math.PI * 2;
+      bd.position.set(Math.cos(a) * 2.32, 2.7 + Math.sin(a) * 2.32, 0.2);
+      bd.rotation.set(Math.PI/2, 0, 0);
+      bd.updateMatrix();
+      bolts.setMatrixAt(i, bd.matrix);
+    }
+    vault.add(bolts);
+    // spoke-wheel handle
+    const wheel = new THREE.Group();
+    wheel.add(new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.075, 12, 48), gold));
+    const spokeGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.66, 10);
+    const spokes = new THREE.InstancedMesh(spokeGeo, gold, 3);
+    for (let i = 0; i < 3; i++){
+      bd.position.set(0, 0, 0);
+      bd.rotation.set(0, 0, i / 3 * Math.PI);
+      bd.updateMatrix();
+      spokes.setMatrixAt(i, bd.matrix);
+    }
+    wheel.add(spokes);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.3, 20), goldBright);
+    hub.rotation.x = Math.PI/2;
+    wheel.add(hub);
+    wheel.position.set(0, 2.7, 0.35);
+    vault.add(wheel);
+    vault.position.set(0, 0, -7.2);
+    scene.add(vault);
+  }
+  // monumental column silhouettes flanking the scene (instanced)
+  {
+    const colMat = new THREE.MeshStandardMaterial({ color: 0x0D0B06, metalness: 0.35, roughness: 0.6, roughnessMap: goldWear });
+    colMat.envMapIntensity = 0.28; // stone, not PVC — no full-length mirror stripe
+    const colGeo = new THREE.CylinderGeometry(0.42, 0.5, 9, 22);
+    const colRingGeo = new THREE.TorusGeometry(0.5, 0.05, 10, 30);
+    const colSpots = [[-5.3, -4.4], [5.3, -4.4], [-6.6, -6.4], [6.6, -6.4]];
+    const colMesh = new THREE.InstancedMesh(colGeo, colMat, colSpots.length);
+    const colRings = new THREE.InstancedMesh(colRingGeo, gold, colSpots.length * 2);
+    const cdc = new THREE.Object3D();
+    colSpots.forEach(([px, pz], i) => {
+      cdc.position.set(px, 4.5, pz); cdc.rotation.set(0, 0, 0); cdc.updateMatrix();
+      colMesh.setMatrixAt(i, cdc.matrix);
+      [0.55, 7.5].forEach((ry2, k) => { // base + capital ring
+        cdc.position.set(px, ry2, pz); cdc.rotation.set(Math.PI/2, 0, 0); cdc.updateMatrix();
+        colRings.setMatrixAt(i * 2 + k, cdc.matrix);
+      });
+    });
+    scene.add(colMesh, colRings);
+  }
+  // fake god-rays: two additive cones from above — vertical fade kills the hard cutout edges
+  if (!reduced){
+    const rayTex = (() => {
+      const c = document.createElement('canvas'); c.width = 8; c.height = 256;
+      const x = c.getContext('2d');
+      const g = x.createLinearGradient(0, 0, 0, 256);
+      g.addColorStop(0, 'rgba(255,255,255,0.95)');   // cone tip (top) bright
+      g.addColorStop(0.55, 'rgba(255,255,255,0.4)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');      // wide base dissolves — no hard bottom edge
+      x.fillStyle = g; x.fillRect(0, 0, 8, 256);
+      return new THREE.CanvasTexture(c);
+    })();
+    const rayMat = new THREE.MeshBasicMaterial({
+      color: 0xF5E4AE, map: rayTex, transparent: true, opacity: 0.06,
+      blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false
+    });
+    // both shafts lean toward the key light at (4,8,5) — one sun, one direction
+    const ray1 = new THREE.Mesh(new THREE.ConeGeometry(2.6, 9, 24, 1, true), rayMat);
+    ray1.position.set(1.0, 4.5, -0.5);
+    ray1.rotation.z = -0.30;
+    ray1.rotation.x = 0.18;
+    scene.add(ray1);
+    const ray2 = new THREE.Mesh(new THREE.ConeGeometry(1.4, 8, 20, 1, true), rayMat.clone());
+    ray2.material.opacity = 0.04;
+    ray2.position.set(-2.0, 4.2, -2.3);
+    ray2.rotation.z = -0.22;
+    ray2.rotation.x = 0.14;
+    scene.add(ray2);
+  }
+  // depth-layered bokeh dust: round sprites, size attenuation does the depth blur
+  if (!reduced){
+    const mkBokeh = (n, spread, zMin, zMax, size, op) => {
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++){
+        pos[i*3] = (Math.random() - 0.5) * spread;
+        pos[i*3+1] = 0.2 + Math.random() * 7.5;
+        pos[i*3+2] = zMin + Math.random() * (zMax - zMin);
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
+        map: softDot, color: 0xF5E4AE, size, transparent: true, opacity: op,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      })));
+    };
+    mkBokeh(mobile ? 12 : 24, 12, 2.0, 5.0, 0.15, 0.35); // near layer: small bright sparkles, not smears
+    mkBokeh(mobile ? 50 : 110, 26, -12, -3, 0.1, 0.5);   // deep layer: twinkles in the fog
+  }
+
+  // ---- coin rain (instanced, simple physics: gravity, bounce, settle, sink-out) ----
+  // tilt-aware clearance: a coin's lowest point is its rim, not its centre
+  const COIN_R = 0.16, COIN_HT = 0.035;
+  function coinClearance(rx, rz){
+    const cy = Math.cos(rx) * Math.cos(rz);          // vertical component of the coin axis (euler XYZ, ry=0)
+    const s  = Math.sqrt(Math.max(0, 1 - cy * cy));
+    return COIN_R * s + (COIN_HT / 2) * Math.abs(cy) + 0.002;
+  }
+  // lowest corner of a tilted bill (0.62 × 0.3 footprint); conservative because ry mixes the extents
+  const billClearance = (rx, rz) =>
+    Math.abs(Math.sin(rz)) * 0.31 + Math.abs(Math.sin(rx)) * 0.15 + 0.007;
+  // landing pads: rain lands ON the props instead of clipping into them  [x, z, radius, topY]
+  // stepped cones (groundAt takes the max) — tight radii so coins never perch on empty air
+  const pads = [
+    [-2.65, 0.1, 0.34, 0.16 + (barRows.length - 1) * 0.161],            // pyramid apex
+    [-2.65, 0.1, 0.44, 0.16 + Math.max(0, barRows.length - 2) * 0.161], // pyramid row 2
+    [-2.65, 0.1, 0.57, 0.16 + Math.max(0, barRows.length - 3) * 0.161], // pyramid row 1 (degenerates safely on mobile)
+    [-2.65, 0.1, 0.72, 0.16],                                           // pyramid base row
+    [-2.1, -1.5, 0.36, 0.20],                                           // cash pile back-left (inside the rain zone!)
+    [ 2.5,  0.55, 0.7, 0.21]                                            // cash pile right
+  ];
+  for (const [tx, tz, tn] of towers) pads.push([tx, tz, 0.24, 0.02 + tn * 0.036]); // coin towers
+  function groundAt(x, z){
+    let g = 0;
+    for (const [px, pz, pr, py] of pads)
+      if ((x - px) * (x - px) + (z - pz) * (z - pz) < pr * pr && py > g) g = py;
+    return g;
+  }
+  const N = reduced ? 0 : (mobile ? 70 : 155);
+  const rain = N ? new THREE.InstancedMesh(coinGeo, [coinSide, coinFace, coinFace], N) : null;
+  const drops = [];
+  function respawnDrop(d, first){
+    d.x = (Math.random()-0.5)*12;
+    d.y = first ? 1 + Math.random()*14 : 5 + Math.random()*10;
+    d.z = -3.4 + Math.random()*3.2;
+    d.vx = (Math.random()-0.5)*0.35;
+    d.vy = -(0.2 + Math.random()*2.4);
+    d.rx = Math.random()*7; d.rz = Math.random()*7;
+    d.vr = 1.2 + Math.random()*3.2;
+    d.vr2 = (0.4 + Math.random()*1.6) * (Math.random() < 0.5 ? -1 : 1); // independent second axis
+    d.wob = Math.random()*7;                                             // precession phase
+    d.bagT = 0;                                                          // time spent touching the bag
+    d.s = 1; d.state = 0; d.rest = 0;
+    d.restMax = 0.8 + Math.random()*2.2;
+  }
+  if (rain){
+    for (let i=0;i<N;i++){ const d = {}; respawnDrop(d, true); drops.push(d); }
+    scene.add(rain);
+  }
+  const dummy = new THREE.Object3D();
+  // falling coins throw a hot glint twice per flip (per-instance overbright colour)
+  const _flash = new THREE.Color(1, 1, 1);
+  if (rain){ for (let i = 0; i < N; i++) rain.setColorAt(i, _flash); }
+  // impact sparkles: a coin slamming the marble throws a brief puff of light
+  const impacts = [];
+  if (rain && !reduced && !mobile){
+    for (let i = 0; i < 7; i++){
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: softDot, color: 0xFFE9A8, transparent: true, opacity: 0,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      }));
+      s.scale.setScalar(0.001);
+      scene.add(s);
+      impacts.push({ spr: s, life: 0 });
+    }
+  }
+
+  // ---- bill rain: green notes fluttering down between the coins ----
+  const BN = reduced ? 0 : (mobile ? 26 : 55);
+  // near-flat bill geometry — clean paper with just a whisper of curl to catch the light
+  // (the old 0.055 arch read as stiffly bent plastic, not as banknotes)
+  const bentBillGeo = new THREE.BoxGeometry(0.62, 0.012, 0.3, 10, 1, 1);
+  {
+    const bp = bentBillGeo.attributes.position;
+    for (let i=0;i<bp.count;i++){
+      const px = bp.getX(i);
+      bp.setY(i, bp.getY(i) + 0.014*(1 - Math.pow(px/0.31, 2)));
+    }
+    bentBillGeo.computeVertexNormals();
+  }
+  const billRain = BN ? new THREE.InstancedMesh(bentBillGeo, [paperA, paperA, billTopMat, billTopMat, paperA, paperA], BN) : null;
+  const billDrops = [];
+  function respawnBill(d, first){
+    d.x = (Math.random()-0.5)*13;
+    d.y = first ? 1 + Math.random()*15 : 6 + Math.random()*10;
+    d.z = -3.6 + Math.random()*3.0;
+    d.vy = -(0.1 + Math.random()*0.4);
+    d.phase = Math.random()*7;
+    d.rx = (Math.random()-0.5)*1.2; d.rz = (Math.random()-0.5)*1.2; d.ry = Math.random()*7;
+    d.wr = 0.55 + Math.random()*0.75;
+    d.bagT = 0;
+    d.s = 1; d.state = 0; d.rest = 0;
+    d.restMax = 1.2 + Math.random()*2.4;
+  }
+  if (billRain){
+    for (let i=0;i<BN;i++){ const d = {}; respawnBill(d, true); billDrops.push(d); }
+    scene.add(billRain);
+  }
+
+  // ---- diamond glints: every few seconds ONE gold hotspot throws a brief 4-point star ----
+  const glints = [];
+  if (!reduced){
+    const starTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const x = c.getContext('2d');
+      const glow = x.createRadialGradient(64, 64, 0, 64, 64, 62);
+      glow.addColorStop(0, 'rgba(255,246,214,0.85)');
+      glow.addColorStop(0.22, 'rgba(255,236,170,0.22)');
+      glow.addColorStop(1, 'rgba(255,236,170,0)');
+      x.fillStyle = glow; x.fillRect(0, 0, 128, 128);
+      const ray = (ang, len, w) => { // slim 4-point star rays
+        x.save(); x.translate(64, 64); x.rotate(ang);
+        x.fillStyle = 'rgba(255,252,240,0.95)';
+        x.beginPath(); x.moveTo(-len, 0); x.lineTo(0, -w); x.lineTo(len, 0); x.lineTo(0, w); x.closePath(); x.fill();
+        x.restore();
+      };
+      ray(0, 58, 3.4); ray(Math.PI / 2, 58, 3.4);
+      ray(Math.PI / 4, 30, 1.8); ray(-Math.PI / 4, 30, 1.8);
+      return new THREE.CanvasTexture(c);
+    })();
+    const addGlint = (parent, px, py, pz, base) => {
+      const m = new THREE.SpriteMaterial({
+        map: starTex, color: 0xFFF6D8, transparent: true, opacity: 0,
+        blending: THREE.AdditiveBlending, depthWrite: false
+      });
+      const s = new THREE.Sprite(m);
+      s.position.set(px, py, pz);
+      s.scale.setScalar(0.001);
+      parent.add(s);
+      glints.push({ spr: s, base, period: 5 + Math.random() * 6, off: Math.random() * 11, dur: 0.5 });
+    };
+    // bag jewellery (bag-local coords — glints ride the bag's rotation)
+    addGlint(bag, 1.22, crestY(1.22) + 0.07, 0.03, 0.30); // zipper slider
+    addGlint(bag, 1.00, 1.80, 0.29, 0.26);                // $ charm
+    addGlint(bag, 0.00, 1.34, 0.97, 0.24);                // sunglasses bridge
+    addGlint(bag, -1.52, 1.70, 0.00, 0.22);               // corner protector
+    // vault + props (world coords)
+    addGlint(scene, 0, 2.72, -6.80, 0.55);                // vault wheel hub
+    addGlint(scene, 0, 5.40, -7.05, 0.50);                // door rim, top
+    addGlint(scene, -2.60, 0.74, 0.20, 0.30);             // pyramid top ingot
+    addGlint(scene, 1.35, 0.26, 1.60, 0.24);              // coin tower front
+    addGlint(scene, 3.40, 0.22, -0.70, 0.24);             // coin tower right
+    addGlint(scene, 2.25, 0.24, 1.06, 0.22);              // black card chip
+  }
+
+  // ---- sparkle dust (opacity pulses in the loop) ----
+  let dustMat = null;
+  if (!reduced){
+    const pGeo = new THREE.BufferGeometry();
+    const pn = mobile ? 80 : 160, pos = new Float32Array(pn*3);
+    for (let i=0;i<pn;i++){ pos[i*3]=(Math.random()-0.5)*14; pos[i*3+1]=Math.random()*7; pos[i*3+2]=(Math.random()-0.5)*8; }
+    pGeo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+    dustMat = new THREE.PointsMaterial({ map: softDot, color:0xF5E4AE, size:0.058, transparent:true, opacity:0.7, blending:THREE.AdditiveBlending, depthWrite:false });
+    scene.add(new THREE.Points(pGeo, dustMat));
+  }
+
+  // ---- interaction ----
+  let mx=0, my=0, tmx=0, tmy=0;
+  addEventListener('pointermove', e => {
+    tmx = (e.clientX/innerWidth - 0.5);
+    tmy = (e.clientY/innerHeight - 0.5);
+  }, { passive:true });
+
+  let scrollP = 0, smoothP = 0;
+  addEventListener('scroll', () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    scrollP = max > 0 ? scrollY/max : 0;
+  }, { passive:true });
+
+  addEventListener('resize', () => {
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  const clock = new THREE.Clock();
+  let t = 0; // akkumulierte Szenen-Zeit: friert bei Tab-Pause ein, max. 0.05s Schritt -> kein Sprung
+  const loop = () => {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    t += dt;
+
+    // framerate-independent easing: no jerk, no random-feeling drift
+    const kFast = 1 - Math.exp(-dt*6), kSlow = 1 - Math.exp(-dt*3);
+    smoothP += (scrollP - smoothP) * kSlow;
+    mx += (tmx-mx)*kFast; my += (tmy-my)*kFast;
+
+    // late-scroll recede: the bag steps back toward the vault door and shrinks,
+    // instead of filling the frame as an out-of-focus black blob behind the cards
+    const late = THREE.MathUtils.smoothstep(smoothP, 0.40, 0.85);
+    bag.scale.setScalar(bagBase * (1 - 0.42*late));   // scaling around y=0 keeps the feet on the mirror
+    bag.position.z = -1.9 * late;                      // fog + kicker light re-frame it as a mid-ground prop
+    bag.rotation.y = (reduced ? 0.15 : Math.sin(t*0.24)*0.3) + smoothP*4.8;
+    bag.rotation.z = mx*0.07;   // bag leans toward the cursor — intentional, not random
+    bag.rotation.x = 0.1 + my*0.06; // base roll toward the camera so the top zipper reads in the hero
+    // grounded on desktop: the feet kiss the mirror; 'breathing' moves millimetres, not centimetres.
+    // mobile lifts the bag into the free band between headline and promise (no reflector there to betray it)
+    bag.position.y = (mobile ? 0.36 : 0.008) + (reduced ? 0 : Math.sin(t*0.8)*0.008);
+    // the luggage tag obeys gravity: counter the bag's roll/lean, plus a lazy pendulum
+    tag.rotation.x = -bag.rotation.x + Math.sin(t*1.6)*0.03;
+    tag.rotation.z = -bag.rotation.z - 0.03 + Math.sin(t*1.3 + 1)*0.02;
+    // contact shadow tracks the bag: lower = darker and tighter, lifted = wider and fainter
+    const bagLift = Math.max(0, bag.position.y);
+    const aoRel = bag.scale.x / bagBase;
+    bagAO.material.opacity = 0.6 - bagLift * 3.0 - late * 0.25;
+    const aoS = (1 + bagLift * 1.4) * aoRel;
+    bagAO.scale.set(1.9 * aoS, 1.15 * aoS, 1);
+    bagAO.rotation.z = bag.rotation.y;
+    bagAO.position.z = bag.position.z;
+
+    // lazy dolly drift — the camera never sits perfectly still (money-video energy, barely conscious).
+    // desktop only: on phones the ±0.22 sine parks the big centred bag visibly off to one side
+    // for half a minute at a time and the slow sway reads as the page wobbling
+    const drift = (reduced || mobile) ? 0 : 1;
+    camera.position.x = mx*1.0 + drift * Math.sin(t*0.12) * 0.22;
+    // mobile: low camera + low look target lifts the bag (and its sunglasses) into the free band
+    // between headline and promise copy — portrait must SHOW the product, not bury it
+    camera.position.y = (mobile ? 1.35 : 2.25) - smoothP*(mobile ? 0.4 : 0.7) + my*-0.35 + drift * Math.sin(t*0.19 + 1.7) * 0.07;
+    camera.position.z = (mobile ? 9.6 : 8.0) - smoothP*1.0;
+    camera.lookAt(drift * Math.sin(t*0.12) * 0.07, (mobile ? 0.3 : 1.05) + drift * Math.sin(t*0.16 + 0.8) * 0.035, 0);
+
+    // per-frame bag frame for the swallow-ellipse — it must rotate with the scroll spin,
+    // or the long axis swallows drops on visible floor while the bag stands crosswise
+    const cBf = Math.cos(bag.rotation.y), sBf = Math.sin(bag.rotation.y);
+    if (rain){
+      const G = 6.5;
+      for (let i=0;i<N;i++){
+        const d = drops[i];
+        if (d.state === 0){
+          d.vy -= G*dt; if (d.vy < -7.5) d.vy = -7.5;
+          d.y += d.vy*dt; d.x += d.vx*dt;
+          // tumble (two axes + precession wobble), not a rotisserie spin
+          d.rx += d.vr*dt;
+          d.rz += d.vr2*dt + Math.sin(t*3 + d.wob)*0.9*dt;
+          // clank off the leather instead of falling through the bag
+          const bn = bagDeflect(d);
+          if (bn){
+            const vn = d.vx*bn.x + d.vy*bn.y;
+            if (vn < 0){ d.vx -= 1.4*vn*bn.x; d.vy -= 1.4*vn*bn.y; }
+            d.vx += bn.x*0.6;
+            // crest trap: shove coins OFF the top and cap the rebound so they can't pogo in place
+            if (bn.y > 0.8){
+              d.vx += (d.x >= 0 ? 1 : -1) * 2.0;
+              d.vy = Math.min(d.vy, 0.9);
+            }
+            d.bagT += dt;
+            if (d.bagT > 0.9) respawnDrop(d, false);
+            d.vr *= 1.25;
+          } else if (d.bagT > 0){
+            // slow decay instead of reset: a pogo-ing coin is airborne between contact frames,
+            // but its contact time must still accumulate or the bail-out never fires
+            d.bagT = Math.max(0, d.bagT - dt*0.25);
+          }
+          // the swallow-ellipse follows the receding, shrinking, ROTATING bag — never a stale hole in the floor
+          const bs = bag.scale.x, bzr = d.z - bag.position.z;
+          const lxE = d.x*cBf - bzr*sBf, lzE = d.x*sBf + bzr*cBf;
+          const outsideBag = (lxE*lxE)/((2.05*bs+0.18)*(2.05*bs+0.18)) + (lzE*lzE)/((1.12*bs+0.18)*(1.12*bs+0.18)) > 1;
+          const floorY = groundAt(d.x, d.z) + coinClearance(d.rx, d.rz); // rim touches first — never pierces
+          if (d.y <= floorY && outsideBag){
+            if (d.vy < -1.6){
+              d.y = floorY; d.vy = -d.vy*0.36; d.vx *= 0.7; d.vr *= 0.55; d.vr2 *= 0.55;
+              for (const im of impacts){
+                if (im.life <= 0){ im.life = 0.3; im.spr.position.set(d.x, floorY + 0.06, d.z); break; }
+              }
+            } else {
+              d.state = 1; d.rest = 0;
+            }
+          } else if (d.y < -1.0){
+            respawnDrop(d, false);
+          }
+        } else {
+          d.rest += dt;
+          if (d.rest <= d.restMax){
+            const txr = Math.round(d.rx/Math.PI)*Math.PI;
+            const tzr = Math.round(d.rz/Math.PI)*Math.PI;
+            d.rx += (txr-d.rx)*Math.min(1, dt*7);   // slightly slower: reads as rocking flat, not snapping
+            d.rz += (tzr-d.rz)*Math.min(1, dt*7);
+            d.y = groundAt(d.x, d.z) + coinClearance(d.rx, d.rz); // rim stays ON the floor while it rocks
+          } else {
+            d.y -= dt*0.06;                          // slips down through the floor seam…
+            d.s = Math.max(0.02, d.s - dt*1.2);      // …with a late assist fade — no melting coins mid-air
+            if (d.y < groundAt(d.x, d.z) - 0.05 || d.s <= 0.03) respawnDrop(d, false);
+          }
+        }
+        dummy.position.set(d.x, d.y, d.z);
+        dummy.rotation.set(d.rx, 0, d.rz);
+        dummy.scale.setScalar(d.s);
+        dummy.updateMatrix();
+        rain.setMatrixAt(i, dummy.matrix);
+        // falling coins throw a hot glint twice per flip as the face sweeps past the light
+        _flash.setScalar(d.state === 0 ? 1 + 3.2 * Math.pow(Math.abs(Math.cos(d.rx)), 36) : 1);
+        rain.setColorAt(i, _flash);
+      }
+      rain.instanceMatrix.needsUpdate = true;
+      rain.instanceColor.needsUpdate = true;
+    }
+    if (billRain){
+      for (let i=0;i<BN;i++){
+        const d = billDrops[i];
+        if (d.state === 0){
+          // falling-leaf motion: pulsing descent, pendulum tilt, sideways glide
+          const flut = 0.72 + 0.38*Math.sin(t*2.6 + d.phase*2);
+          d.vy -= 0.8*dt; if (d.vy < -1.0) d.vy = -1.0;
+          d.y += d.vy*flut*dt;
+          d.x += Math.sin(t*1.4 + d.phase)*1.1*dt;
+          d.z += Math.cos(t*1.15 + d.phase)*0.18*dt;
+          d.rx = 0.5*Math.sin(t*1.8 + d.phase*1.3) * d.wr;
+          d.rz = 0.7*Math.sin(t*2.1 + d.phase) * d.wr;
+          d.ry += 0.35*dt;
+          // paper can't bounce off the bag — it slides off sideways
+          const bnb = bagDeflect(d);
+          if (bnb){
+            d.x += bnb.x*1.6*dt; d.z += bnb.z*1.6*dt;
+            d.vy *= 0.4;
+            d.bagT += dt;
+            if (d.bagT > 1.5) respawnBill(d, false); // lingering on the leather is never allowed
+          } else if (d.bagT > 0){
+            d.bagT = Math.max(0, d.bagT - dt*0.25);
+          }
+          const bs = bag.scale.x, bzr = d.z - bag.position.z;
+          const lxE = d.x*cBf - bzr*sBf, lzE = d.x*sBf + bzr*cBf;
+          const outsideBag = (lxE*lxE)/((2.05*bs+0.18)*(2.05*bs+0.18)) + (lzE*lzE)/((1.12*bs+0.18)*(1.12*bs+0.18)) > 1;
+          const floorY = groundAt(d.x, d.z) + billClearance(d.rx, d.rz); // a corner never stabs the mirror
+          if (d.y <= floorY && outsideBag){
+            d.state = 1; d.rest = 0;
+          } else if (d.y < -1.0){
+            respawnBill(d, false);
+          }
+        } else {
+          d.rest += dt;
+          if (d.rest <= d.restMax){
+            d.rx += (0 - d.rx)*Math.min(1, dt*5);   // paper settles softly — slower than metal
+            d.rz += (0 - d.rz)*Math.min(1, dt*5);
+            d.y = groundAt(d.x, d.z) + billClearance(d.rx, d.rz); // eases down as it flattens
+          } else {
+            d.y -= dt*0.04;                          // slips out below the floor instead of shrinking
+            d.s = Math.max(0.02, d.s - dt*1.0);
+            if (d.y < groundAt(d.x, d.z) - 0.05 || d.s <= 0.03) respawnBill(d, false);
+          }
+        }
+        dummy.position.set(d.x, d.y, d.z);
+        dummy.rotation.set(d.rx, d.ry, d.rz);
+        dummy.scale.setScalar(d.s);
+        dummy.updateMatrix();
+        billRain.setMatrixAt(i, dummy.matrix);
+      }
+      billRain.instanceMatrix.needsUpdate = true;
+    }
+    if (dustMat) dustMat.opacity = 0.5 + Math.sin(t*2.2)*0.28;
+
+    // diamond glints: one hotspot at a time throws a brief 4-point star
+    for (const gl of glints){
+      const ph = (t + gl.off) % gl.period;
+      if (ph < gl.dur){
+        const u = ph / gl.dur;
+        gl.spr.material.opacity = Math.sin(u * Math.PI) * 0.9;
+        gl.spr.scale.setScalar(gl.base * (0.55 + 0.75 * u));
+        gl.spr.material.rotation = (Math.floor((t + gl.off) / gl.period) * 1.7) % 6.283;
+      } else if (gl.spr.material.opacity > 0) gl.spr.material.opacity = 0;
+    }
+    // travelling light-run along the zipper teeth
+    if (zipGlint){
+      const zc = (t % 8.5) / 8.5;            // one sweep every 8.5 s
+      if (zc < 0.14){
+        const u = zc / 0.14;
+        const zx = -ZIP_X + 2 * ZIP_X * u;
+        zipGlint.position.set(zx, crestY(zx) + 0.05, 0);
+        zipGlint.material.opacity = Math.sin(u * Math.PI) * 0.8;
+      } else if (zipGlint.material.opacity > 0) zipGlint.material.opacity = 0;
+    }
+    // impact sparkle fade
+    for (const im of impacts){
+      if (im.life > 0){
+        im.life -= dt;
+        const u = Math.max(im.life, 0) / 0.3;
+        im.spr.material.opacity = u * 0.75;
+        im.spr.scale.setScalar(0.1 + (1 - u) * 0.32);
+      } else if (im.spr.material.opacity > 0) im.spr.material.opacity = 0;
+    }
+
+    renderer.render(scene, camera);
+  };
+  // fade the scene in on its first rendered frame — a soft entrance instead of a hard pop
+  let firstFrame = true;
+  const loopWithFade = () => {
+    loop();
+    if (firstFrame){
+      firstFrame = false;
+      canvas.classList.add('on');
+      const boot = document.getElementById('boot');
+      if (boot) boot.classList.add('done');
+    }
+  };
+  // Hintergrund-Tab: Rendering deterministisch stoppen (Browser-Throttling variiert je Engine);
+  // gilt auch für den Initial-Start, falls die Seite direkt im Hintergrund-Tab geöffnet wird
+  const applyLoopState = () => renderer.setAnimationLoop(document.hidden ? null : loopWithFade);
+  // pre-compile all shader programs in parallel (KHR_parallel_shader_compile) BEFORE the first
+  // frame — dozens of MeshPhysicalMaterial variants otherwise stall the main thread for seconds
+  // on real GPUs during the first render
+  const startLoop = () => {
+    applyLoopState();
+    document.addEventListener('visibilitychange', applyLoopState);
+  };
+  if (renderer.compileAsync) renderer.compileAsync(scene, camera).then(startLoop, startLoop);
+  else startLoop();
+} catch (err) {
+  document.body.classList.add('no3d');
+  console.warn('3D disabled:', err);
+}
+</script>
+</body>
+</html>
